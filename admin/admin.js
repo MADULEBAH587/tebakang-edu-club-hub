@@ -58,7 +58,11 @@ $("#matchForm").addEventListener("submit",async e=>{
     else await addDoc(collection(db,"matches"),{...payload,createdAt:serverTimestamp()});
     setMsg("#matchMessage","Saved. Public site updates in realtime.","ok");
     resetMatchForm();
-  }catch(err){setMsg("#matchMessage",friendly(err),"error");}
+  }catch(err){
+    const msg=friendly(err);
+    setMsg("#matchMessage",msg,"error");
+    showToast("Firestore write failed: "+msg,"error");
+  }
 });
 
 onSnapshot(collection(db,"matches"),snap=>{
@@ -157,6 +161,7 @@ $("#seedSquadBtn").addEventListener("click",async()=>{
   }catch(err){setMsg("#playerMessage",friendly(err),"error");}
 });
 $("#seedMatchBtn").addEventListener("click",async()=>{
+  showToast("Saving KATMA result…");
   try{
     setMsg("#matchMessage","Saving KATMA result…");
     await setDoc(doc(db,"matches","katma-2026-09-28"),{
@@ -165,10 +170,22 @@ $("#seedMatchBtn").addEventListener("click",async()=>{
       matchType:"Friendly Match",venue:"Venue archived",status:"FT",homeScore:0,awayScore:2,updatedAt:serverTimestamp()
     },{merge:true});
     setMsg("#matchMessage","KATMA result seeded ✓ Check the Matches list below and refresh the public page.","ok");
-  }catch(err){setMsg("#matchMessage",friendly(err),"error");}
+    showToast("KATMA result berjaya disimpan ke Firestore ✓","ok");
+  }catch(err){
+    const msg=friendly(err);
+    setMsg("#matchMessage",msg,"error");
+    showToast("Firestore write failed: "+msg,"error");
+  }
 });
 
 function slug(s){return s.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");}
 function esc(v=""){return String(v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
 function setMsg(sel,text,type=""){const el=$(sel);if(!el)return;el.textContent=text;el.className="message "+type;}
+function showToast(text,type=""){
+  const el=$("#globalToast");
+  if(!el)return;
+  el.textContent=text;el.className="global-toast "+type;el.hidden=false;
+  clearTimeout(window.__toastTimer);
+  window.__toastTimer=setTimeout(()=>{el.hidden=true;},6000);
+}
 function friendly(err){const code=err?.code||"";if(code.includes("permission-denied"))return "Permission denied. Firestore admin UID rule is not active yet.";if(code.includes("invalid-credential"))return "Email or password is incorrect.";if(code.includes("operation-not-allowed"))return "Enable Email/Password in Firebase Authentication first.";return err?.message||"Something went wrong.";}
