@@ -1,28 +1,48 @@
-# Tebakang Edu Club Hub
+# Tebakang Edu Club Hub — v1.0
 
-Animated, mobile-first digital clubhouse for Tebakang Educator FC.
+Premium, animated, mobile-first digital clubhouse for Tebakang Educator FC.
 
-## Current prototype
-- Dark premium animated interface
-- Tebakang Educator FC official crest
-- Match ticker
-- Latest result / Match Centre
-- Overview, Timeline, Lineup and Stats tabs
-- Match archive
-- Squad cards
-- Responsive mobile-first layout
-- Netlify-ready static deployment
+## Stack
+- Netlify Free — hosting + continuous deployment
+- GitHub — source control
+- Firebase Spark — Firestore + Email/Password Authentication
+- No Firebase Storage / no billing dependency
 
-## Data strategy
-The prototype is intentionally static first. Firebase Spark will later provide:
-- Firestore: matches, seasons, players, opponents, match events
-- Firebase Auth: admin login
-- Realtime listeners: live score and live events
+## Public Club Hub
+- Dynamic Match Centre: upcoming / matchday / live / half-time / full-time
+- Realtime scores and match events
+- Match timeline
+- Starting XI + substitutes
+- Match statistics
+- Match archive + season filter + historical match viewer
+- Recent form
+- H2H records generated automatically
+- Squad cards with player photos
+- Player profiles + season/career stats
+- Club season stats + player spotlight
+- Media gallery
+- Live GOAL overlay
+- Match sharing
+- Public visibility settings
 
-Images stay in the Git repository/static assets for a zero-billing setup.
+## Admin Control Room
+- Opponent Manager with compressed logo uploads
+- Player Manager with compressed face/full-body photos
+- Create, edit, hide, restore and delete past/future matches
+- Formation, XI, substitutes and Man of the Match
+- Live score controls
+- Goal / card / substitution / note timeline events
+- Optional match statistics
+- Media manager
+- Season and visibility settings
+- JSON backup
+- Automatic Matchday / Full Time / Lineup / MOTM Poster Studio
 
-## Netlify
-No build command is required. Publish directory is the project root (`.`).
+## Zero-cost image strategy
+Images are compressed client-side to WebP before being written as small Firestore document fields. This avoids enabling Firebase Storage. Keep the gallery curated because Firestore documents have size limits and image payloads consume database bandwidth.
 
-## Important
-`assets/katma-placeholder.svg` is only a temporary placeholder. Replace it with the official KATMA crest before the production launch.
+## Security
+Public reads are allowed for the public club site. Firestore writes require the authenticated administrator UID defined in `firestore.rules`.
+
+## Production
+https://tebakang-edu-club-hub.netlify.app
