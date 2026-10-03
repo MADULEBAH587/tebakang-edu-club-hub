@@ -18,15 +18,23 @@ const players = [
 ];
 
 const playerGrid = document.getElementById('playerGrid');
-playerGrid.innerHTML = players.map((p, i) => `
-  <article class="player-card" style="transition-delay:${Math.min(i*30,240)}ms">
-    <div class="player-no">${p.no}</div>
-    <span class="player-pos">${p.pos}</span>
-    <h3>${p.name.toUpperCase()}</h3>
-    <p>TEBAKANG EDUCATOR FC</p>
-    <div class="accent-line"></div>
-  </article>
-`).join('');
+window.renderClubPlayers = function(list){
+  if(!playerGrid) return;
+  playerGrid.innerHTML = list.map((p, i) => {
+    const number = p.number ?? p.no ?? '—';
+    const position = p.position ?? p.pos ?? 'PLAYER';
+    const name = p.name ?? 'Player';
+    return `
+      <article class="player-card" style="transition-delay:${Math.min(i*30,240)}ms">
+        <div class="player-no">${number}</div>
+        <span class="player-pos">${position}</span>
+        <h3>${name.toUpperCase()}</h3>
+        <p>TEBAKANG EDUCATOR FC</p>
+        <div class="accent-line"></div>
+      </article>`;
+  }).join('');
+};
+window.renderClubPlayers(players);
 
 const observer = new IntersectionObserver(entries => {
   entries.forEach(entry => {
