@@ -116,12 +116,12 @@ function renderPlayers(players){
 function escapeHtml(v=""){return String(v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
 function escapeAttr(v=""){return escapeHtml(v);}
 
-const matchesQ=query(collection(db,"matches"),orderBy("kickoff","desc"),limit(30));
-onSnapshot(matchesQ,(snap)=>{
+onSnapshot(collection(db,"matches"),(snap)=>{
   if(snap.empty) return;
   const matches=snap.docs.map(d=>({id:d.id,...d.data()}));
-  const now=Date.now();
   const kickoffMs=m=>m.kickoff?.toMillis ? m.kickoff.toMillis() : new Date(m.kickoff||0).getTime();
+  matches.sort((a,b)=>kickoffMs(b)-kickoffMs(a));
+  const now=Date.now();
   const live=matches.find(m=>["LIVE","HT","MATCHDAY"].includes(m.status));
   const latest=matches.find(m=>m.status==="FT");
   const upcoming=[...matches].filter(m=>!["FT","LIVE","HT"].includes(m.status)&&kickoffMs(m)>=now).sort((a,b)=>kickoffMs(a)-kickoffMs(b))[0];
