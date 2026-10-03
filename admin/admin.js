@@ -61,9 +61,10 @@ $("#matchForm").addEventListener("submit",async e=>{
   }catch(err){setMsg("#matchMessage",friendly(err),"error");}
 });
 
-const matchesQ=query(collection(db,"matches"),orderBy("kickoff","desc"));
-onSnapshot(matchesQ,snap=>{
+onSnapshot(collection(db,"matches"),snap=>{
   matches=snap.docs.map(d=>({id:d.id,...d.data()}));
+  const kickoffMs=m=>m.kickoff?.toMillis ? m.kickoff.toMillis() : new Date(m.kickoff||0).getTime();
+  matches.sort((x,y)=>kickoffMs(y)-kickoffMs(x));
   renderMatches();
   if(selectedMatchId) selectMatch(selectedMatchId,false);
 },err=>setMsg("#matchMessage",friendly(err),"error"));
@@ -157,12 +158,13 @@ $("#seedSquadBtn").addEventListener("click",async()=>{
 });
 $("#seedMatchBtn").addEventListener("click",async()=>{
   try{
+    setMsg("#matchMessage","Saving KATMA result…");
     await setDoc(doc(db,"matches","katma-2026-09-28"),{
       opponent:"KATMA",opponentCode:"KAT",opponentLogo:"/assets/katma-placeholder.svg",
       kickoff:Timestamp.fromDate(new Date("2026-09-28T16:30:00+08:00")),season:"2026",matchday:3,
       matchType:"Friendly Match",venue:"Venue archived",status:"FT",homeScore:0,awayScore:2,updatedAt:serverTimestamp()
     },{merge:true});
-    setMsg("#matchMessage","KATMA result seeded.","ok");
+    setMsg("#matchMessage","KATMA result seeded ✓ Check the Matches list below and refresh the public page.","ok");
   }catch(err){setMsg("#matchMessage",friendly(err),"error");}
 });
 
