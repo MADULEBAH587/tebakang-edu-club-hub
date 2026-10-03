@@ -53,6 +53,7 @@
         <button data-page="opponents">Opponents</button>
         <button data-page="players">Players</button>
         <button data-page="media">Media</button>
+        <button data-page="poster">Poster Studio</button>
         <button data-page="settings">Settings</button>
       </nav>
 
@@ -261,6 +262,22 @@
             <div id="mediaAdminList" class="media-admin-grid"></div>
           </section>
         </div>
+      </section>
+
+
+      <section class="admin-page" data-page-panel="poster">
+        <section class="panel">
+          <div class="panel-head"><div><span class="eyebrow">SOCIAL CREATIVE</span><h2>Automatic Poster Studio</h2></div><span class="status-badge">1080 × 1350</span></div>
+          <div class="poster-controls">
+            <label>Match<select id="posterMatch"><option value="">Choose match</option></select></label>
+            <label>Poster type<select id="posterType"><option value="MATCHDAY">Matchday</option><option value="FULLTIME">Full Time</option><option value="LINEUP">Lineup</option><option value="MOTM">Man of the Match</option></select></label>
+            <button id="generatePosterBtn" class="primary" type="button">Generate poster</button>
+            <button id="downloadPosterBtn" class="secondary" type="button">Download PNG</button>
+          </div>
+          <p class="muted-copy">Uses the saved club crest, opponent logo, match data, lineup and MOTM automatically. No external image service required.</p>
+          <div class="poster-stage"><canvas id="posterCanvas" width="1080" height="1350"></canvas></div>
+          <div id="posterMessage" class="message"></div>
+        </section>
       </section>
 
       <section class="admin-page" data-page-panel="settings">
