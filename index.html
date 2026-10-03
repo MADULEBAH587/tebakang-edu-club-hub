@@ -1,221 +1,99 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#07130f" />
-  <meta name="description" content="Tebakang Edu Club Hub — official digital clubhouse for Tebakang Educator FC." />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#07130f">
+  <meta name="description" content="Tebakang Edu Club Hub — digital clubhouse for Tebakang Educator FC.">
   <title>Tebakang Edu Club Hub</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Oswald:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./styles.css" />
+  <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
-  <div class="ambient" aria-hidden="true">
-    <div class="orb orb-a"></div>
-    <div class="orb orb-b"></div>
-    <div class="grid"></div>
-    <div class="stadium-light left"></div>
-    <div class="stadium-light right"></div>
-  </div>
+  <div class="ambient" aria-hidden="true"><div class="orb orb-a"></div><div class="orb orb-b"></div><div class="grid"></div><div class="stadium-light left"></div><div class="stadium-light right"></div></div>
+  <div id="goalOverlay" class="goal-overlay" hidden><img src="./assets/tebakang-edu-logo.webp" alt=""><span>GOAL!</span><strong id="goalOverlayName">TEBAKANG EDU</strong><small id="goalOverlayMinute"></small></div>
 
-  <div class="match-ticker" aria-label="Latest club update">
-    <div class="ticker-track">
-      <span><b>LATEST</b> &nbsp; TEBAKANG EDU 0–2 KATMA &nbsp; <em>FT</em></span>
-      <span>•</span>
-      <span>TEBAKANG EDU CLUB HUB &nbsp; SEASON 2026</span>
-      <span>•</span>
-      <span><b>NEXT MATCH</b> &nbsp; TO BE ANNOUNCED</span>
-      <span>•</span>
-      <span><b>LATEST</b> &nbsp; TEBAKANG EDU 0–2 KATMA &nbsp; <em>FT</em></span>
-    </div>
-  </div>
+  <div class="match-ticker" aria-label="Latest club update"><div class="ticker-track"><span><b>TEBAKANG EDU CLUB HUB</b> · SEASON 2026</span></div></div>
 
   <header class="topbar">
-    <a href="#home" class="brand" aria-label="Tebakang Edu Club Hub home">
-      <img src="./assets/tebakang-edu-logo.webp" alt="Tebakang Educator FC crest" />
-      <div>
-        <strong>TEBAKANG EDU</strong>
-        <span>CLUB HUB</span>
-      </div>
-    </a>
+    <a href="#home" class="brand"><img src="./assets/tebakang-edu-logo.webp" alt="Tebakang Educator FC crest"><div><strong>TEBAKANG EDU</strong><span>CLUB HUB</span></div></a>
     <button class="menu-button" id="menuButton" aria-label="Open menu" aria-expanded="false">☰</button>
     <nav id="mainNav">
-      <a class="active" href="#home">Home</a>
-      <a href="#matches">Matches</a>
-      <a href="#squad">Squad</a>
-      <a href="#stats">Stats</a>
+      <a class="active" href="#home">Home</a><a href="#matches">Matches</a><a href="#squad">Squad</a><a href="#stats">Stats</a><a href="#media">Media</a>
     </nav>
   </header>
 
   <main>
     <section id="home" class="hero section reveal">
       <div class="hero-copy">
-        <div class="eyebrow"><span class="live-dot"></span> DIGITAL CLUBHOUSE · 2026</div>
+        <div class="eyebrow"><span class="live-dot"></span> DIGITAL CLUBHOUSE · <span id="heroSeason">2026</span></div>
         <h1>TEBAKANG<br><span>EDU CLUB HUB</span></h1>
         <p class="tagline">Kalah biasa, menang luar biasa.</p>
-        <p class="hero-note">A premium, animated matchday experience for Tebakang Educator FC.</p>
-        <div class="hero-actions">
-          <a class="button primary" href="#match-centre">Open Match Centre</a>
-          <a class="button ghost" href="#squad">Meet the Squad</a>
-        </div>
+        <p class="hero-note">Matchday, squad, live updates and club history — all in one home.</p>
+        <div class="hero-actions"><a class="button primary" href="#match-centre">Open Match Centre</a><a class="button ghost" href="#squad">Meet the Squad</a></div>
       </div>
-      <div class="hero-crest-wrap" aria-hidden="true">
-        <div class="crest-halo"></div>
-        <img class="hero-crest" src="./assets/tebakang-edu-logo.webp" alt="" />
-        <div class="floating-label label-a">EST. 2026 HUB</div>
-        <div class="floating-label label-b">TEBAKANG PEDULI</div>
-      </div>
+      <div class="hero-crest-wrap" aria-hidden="true"><div class="crest-halo"></div><img class="hero-crest" src="./assets/tebakang-edu-logo.webp" alt=""><div class="floating-label label-a">TEBAKANG EDUCATOR FC</div><div class="floating-label label-b">TEBAKANG PEDULI</div></div>
       <div class="scroll-cue">SCROLL <span>↓</span></div>
     </section>
 
     <section class="section compact reveal">
-      <div class="section-heading">
-        <div><span class="kicker">MATCHDAY</span><h2>Latest Result</h2></div>
-        <span class="status-pill ft">FULL TIME</span>
-      </div>
-
+      <div class="section-heading"><div><span class="kicker">MATCHDAY</span><h2 id="matchHeading">Latest Result</h2></div><span id="mainStatusBadge" class="status-pill ft">FULL TIME</span></div>
       <article id="match-centre" class="scoreboard glass-card">
-        <div class="score-topline">
-          <span>FRIENDLY MATCH</span>
-          <span>28 SEPTEMBER 2026</span>
-        </div>
+        <div class="score-topline"><span id="matchTypeTop">FRIENDLY MATCH</span><span id="matchDateTop">TBA</span></div>
         <div class="score-main">
-          <div class="team-block home-team">
-            <div class="crest-frame green"><img src="./assets/tebakang-edu-logo.webp" alt="Tebakang Educator FC" /></div>
-            <strong>TEBAKANG EDU</strong>
-            <span>TEDU</span>
-          </div>
-          <div class="score-center">
-            <div class="status-mini">FT</div>
-            <div class="score"><span>0</span><i>—</i><span>2</span></div>
-            <small>FULL TIME</small>
-          </div>
-          <div class="team-block away-team">
-            <div class="crest-frame red"><img src="./assets/katma-placeholder.svg" alt="KATMA placeholder crest" /></div>
-            <strong>KATMA</strong>
-            <span>KAT</span>
-          </div>
+          <div class="team-block home-team"><div class="crest-frame green"><img src="./assets/tebakang-edu-logo.webp" alt="Tebakang Educator FC"></div><strong>TEBAKANG EDU</strong><span>TEDU</span></div>
+          <div class="score-center"><div id="matchStatusMini" class="status-mini">FT</div><div class="score"><span id="homeScoreMain">0</span><i>—</i><span id="awayScoreMain">2</span></div><small id="scoreCaption">FULL TIME</small></div>
+          <div class="team-block away-team"><div class="crest-frame red"><img id="awayLogoMain" src="./assets/katma-placeholder.svg" alt="Opponent crest"></div><strong id="awayNameMain">KATMA</strong><span id="awayCodeMain">KAT</span></div>
         </div>
-        <div class="match-meta">
-          <span>⚽ Friendly Match</span>
-          <span>🏟️ Venue archived</span>
-          <span>🏁 Matchday 3</span>
-        </div>
-        <div class="match-tabs" role="tablist" aria-label="Match centre sections">
-          <button class="tab active" data-tab="overview">Overview</button>
-          <button class="tab" data-tab="timeline">Timeline</button>
-          <button class="tab" data-tab="lineup">Lineup</button>
-          <button class="tab" data-tab="stats">Stats</button>
-        </div>
+        <div class="match-meta"><span id="metaType">⚽ Friendly Match</span><span id="metaVenue">🏟️ Venue TBA</span><span id="metaMatchday">🏁 Club Match</span></div>
+        <div class="match-tabs"><button class="tab active" data-tab="overview">Overview</button><button class="tab" data-tab="timeline">Timeline</button><button class="tab" data-tab="lineup">Lineup</button><button class="tab" data-tab="stats">Stats</button></div>
         <div class="tab-panels">
-          <div class="tab-panel active" id="overview">
-            <div class="overview-grid">
-              <div class="event-card"><span>RESULT</span><strong>0–2</strong><small>Latest confirmed score</small></div>
-              <div class="event-card"><span>STATUS</span><strong>FT</strong><small>Match completed</small></div>
-              <div class="event-card"><span>SEASON</span><strong>2026</strong><small>Club Hub archive</small></div>
-            </div>
-          </div>
-          <div class="tab-panel" id="timeline">
-            <div class="timeline-bar"><span>KO</span><i></i><span>HT</span><i></i><span>FT</span></div>
-            <p class="empty-state">Detailed match events can be added from Live Control when Firebase is connected.</p>
-          </div>
-          <div class="tab-panel" id="lineup">
-            <div class="pitch-mini">
-              <div class="pitch-line center"></div><div class="pitch-circle"></div>
-              <span class="p p-gk">DAVID</span>
-              <span class="p p-lb">TARMIZI</span><span class="p p-cb1">DILAH</span><span class="p p-cb2">MCQUEL</span><span class="p p-rb">PITERI</span>
-              <span class="p p-dm">HADGES</span><span class="p p-cm">MAHATHIR</span>
-              <span class="p p-lw">ZAIRY</span><span class="p p-am">AZNEL</span><span class="p p-rw">HASIF</span>
-              <span class="p p-st">ROSBI</span>
-            </div>
-          </div>
-          <div class="tab-panel" id="stats-panel">
-            <p class="empty-state">Match statistics are hidden until recorded — no fake 0–0 data.</p>
-          </div>
+          <div class="tab-panel active" id="overview"><div class="overview-grid"><div class="event-card"><span>RESULT</span><strong id="overviewResult">0–2</strong><small id="overviewOpponent">Latest match</small></div><div class="event-card"><span>STATUS</span><strong id="overviewStatus">FT</strong><small>Match state</small></div><div class="event-card"><span>MAN OF THE MATCH</span><strong id="overviewMotm">—</strong><small id="overviewSeason">Season 2026</small></div></div></div>
+          <div class="tab-panel" id="timeline"><div id="publicTimeline" class="public-timeline"><p class="empty-state">No timeline events recorded yet.</p></div></div>
+          <div class="tab-panel" id="lineup"><div id="publicPitch" class="pitch-mini"><div class="pitch-line center"></div><div class="pitch-circle"></div></div><div id="publicBench" class="bench-list"></div></div>
+          <div class="tab-panel" id="stats-panel"><div id="publicMatchStats" class="match-stat-list"><p class="empty-state">Match statistics appear when recorded.</p></div></div>
         </div>
       </article>
     </section>
 
     <section class="section compact reveal">
       <div class="next-match glass-card">
-        <div>
-          <span class="kicker">NEXT MATCH</span>
-          <h2>Ready for the next one.</h2>
-          <p>Opponent, date, venue and crest will appear here the moment Admin creates the next fixture.</p>
-        </div>
-        <div class="tba-orbit"><span>TBA</span></div>
+        <div><span class="kicker">NEXT MATCH</span><h2 id="nextMatchTitle">Ready for the next one.</h2><p id="nextMatchMeta">Opponent, date and venue will appear here.</p><div id="nextMatchCountdown" class="countdown">TBA</div></div>
+        <div class="next-opponent"><img id="nextOpponentLogo" alt="Next opponent"><span id="nextOpponentCode">TBA</span></div>
       </div>
+      <div id="recentForm" class="recent-form"></div>
     </section>
 
-    <section id="matches" class="section reveal">
-      <div class="section-heading">
-        <div><span class="kicker">FIXTURES & RESULTS</span><h2>Match Archive</h2></div>
-        <span class="season-chip">SEASON 2026</span>
-      </div>
-      <div class="match-list">
-        <article class="match-row featured">
-          <div class="match-date"><b>28</b><span>SEP</span></div>
-          <img src="./assets/tebakang-edu-logo.webp" alt="Tebakang Educator FC" />
-          <strong>Tebakang Edu</strong>
-          <div class="row-score">0 <small>FT</small> 2</div>
-          <strong>KATMA</strong>
-          <img src="./assets/katma-placeholder.svg" alt="KATMA placeholder crest" />
-          <span class="match-type">Friendly</span>
-        </article>
-        <article class="match-row muted">
-          <div class="match-date"><b>17</b><span>SEP</span></div>
-          <img src="./assets/tebakang-edu-logo.webp" alt="Tebakang Educator FC" />
-          <strong>Tebakang Edu</strong>
-          <div class="row-score">— <small>ARCHIVE</small> —</div>
-          <strong>PSKPP Vet</strong>
-          <div class="initial-crest">PV</div>
-          <span class="match-type">Friendly</span>
-        </article>
-        <article class="match-row muted">
-          <div class="match-date"><b>20</b><span>AUG</span></div>
-          <div class="initial-crest">PV</div>
-          <strong>PSKPP Vet</strong>
-          <div class="row-score">— <small>ARCHIVE</small> —</div>
-          <strong>Tebakang Edu</strong>
-          <img src="./assets/tebakang-edu-logo.webp" alt="Tebakang Educator FC" />
-          <span class="match-type">Friendly</span>
-        </article>
-      </div>
+    <section id="matches" class="section reveal public-section">
+      <div class="section-heading"><div><span class="kicker">FIXTURES & RESULTS</span><h2>Match Archive</h2></div><select id="seasonFilter" class="public-select"><option value="ALL">All seasons</option></select></div>
+      <div id="matchList" class="match-list"><div class="empty-state">Loading match archive…</div></div>
     </section>
 
-    <section id="squad" class="section reveal">
-      <div class="section-heading">
-        <div><span class="kicker">THE SQUAD</span><h2>Players</h2></div>
-        <span class="season-chip">2026</span>
-      </div>
-      <div class="players" id="playerGrid"></div>
+    <section id="h2h" class="section reveal public-section">
+      <div class="section-heading"><div><span class="kicker">HEAD TO HEAD</span><h2>Opponent Records</h2></div><span class="season-chip">ALL TIME</span></div>
+      <div id="h2hGrid" class="h2h-grid"></div>
     </section>
 
-    <section id="stats" class="section reveal">
-      <div class="section-heading">
-        <div><span class="kicker">CLUB SNAPSHOT</span><h2>Season Overview</h2></div>
-      </div>
-      <div class="stat-grid">
-        <article><span>Matchdays</span><strong data-count="3">0</strong><small>recorded</small></article>
-        <article><span>Latest Result</span><strong>0–2</strong><small>vs KATMA</small></article>
-        <article><span>Season</span><strong>2026</strong><small>active archive</small></article>
-        <article><span>Identity</span><strong>TEDU</strong><small>club code</small></article>
-      </div>
-      <div class="principle glass-card">
-        <span class="kicker">CLUB HUB PRINCIPLE</span>
-        <h3>Professional outside. Simple inside.</h3>
-        <p>Only data that adds visual value is shown. Missing statistics stay hidden instead of displaying meaningless zeroes.</p>
-      </div>
+    <section id="squad" class="section reveal public-section">
+      <div class="section-heading"><div><span class="kicker">THE SQUAD</span><h2>Players</h2></div><span id="squadSeason" class="season-chip">2026</span></div>
+      <div id="playerGrid" class="players"></div>
+    </section>
+
+    <section id="stats" class="section reveal public-section">
+      <div class="section-heading"><div><span class="kicker">CLUB SNAPSHOT</span><h2>Season Overview</h2></div><span id="statsSeason" class="season-chip">2026</span></div>
+      <div id="clubStatGrid" class="stat-grid"></div>
+      <div id="playerSpotlight" class="spotlight glass-card"></div>
+    </section>
+
+    <section id="media" class="section reveal public-section">
+      <div class="section-heading"><div><span class="kicker">CLUB MEDIA</span><h2>Gallery</h2></div><span class="season-chip">MOMENTS</span></div>
+      <div id="mediaGrid" class="media-grid"></div>
     </section>
   </main>
 
-  <footer>
-    <img src="./assets/tebakang-edu-logo.webp" alt="Tebakang Educator FC" />
-    <div><strong>TEBAKANG EDU CLUB HUB</strong><span>Kalah biasa, menang luar biasa.</span></div>
-    <small>v0.2 · Firebase-ready · <a href="/admin/" style="color:inherit;text-decoration:underline">Admin</a></small>
-  </footer>
+  <footer><img src="./assets/tebakang-edu-logo.webp" alt="Tebakang Educator FC"><div><strong>TEBAKANG EDU CLUB HUB</strong><span>Kalah biasa, menang luar biasa.</span></div><small>v1.0 · Realtime Firebase · <a href="/admin/">Admin</a></small></footer>
 
   <script src="./app.js"></script>
   <script type="module" src="./firebase-public.js"></script>
