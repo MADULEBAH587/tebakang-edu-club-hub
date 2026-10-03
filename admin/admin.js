@@ -1,191 +1,106 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
-import {
-  getFirestore, collection, query, orderBy, onSnapshot, addDoc, setDoc, doc,
-  updateDoc, deleteDoc, serverTimestamp, Timestamp, writeBatch
-} from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
-import {
-  getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged
-} from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
+import { getFirestore, collection, onSnapshot, addDoc, setDoc, doc, updateDoc, deleteDoc, serverTimestamp, Timestamp, writeBatch } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
 import { firebaseConfig } from "../firebase-config.js";
 
-const app=initializeApp(firebaseConfig);
-const db=getFirestore(app);
-const auth=getAuth(app);
-const $=s=>document.querySelector(s);
-let matches=[];
-let players=[];
-let selectedMatchId=null;
+const app=initializeApp(firebaseConfig), db=getFirestore(app), auth=getAuth(app);
+const $=s=>document.querySelector(s), $$=s=>Array.from(document.querySelectorAll(s));
+let matches=[],players=[],opponents=[],events=[],media=[],settings={},selectedMatchId="";
+let pendingOpponentLogo="",pendingPlayerPhoto="",pendingMediaImage="",editingOpponentLogo="",editingPlayerPhoto="";
 
-const loginPanel=$("#loginPanel"),dashboard=$("#dashboard"),logoutBtn=$("#logoutBtn");
-$("#loginForm").addEventListener("submit",async e=>{
-  e.preventDefault();
-  setMsg("#loginMessage","Signing in…");
-  try{
-    await signInWithEmailAndPassword(auth,$("#email").value.trim(),$("#password").value);
-    setMsg("#loginMessage","");
-  }catch(err){setMsg("#loginMessage",friendly(err),"error");}
-});
-logoutBtn.addEventListener("click",()=>signOut(auth));
-onAuthStateChanged(auth,user=>{
-  const signed=!!user;
-  loginPanel.hidden=signed;
-  dashboard.hidden=!signed;
-  logoutBtn.hidden=!signed;
-  $("#userEmail").textContent=user?.email||"—";
-  $("#connectionBadge").textContent=signed?"FIREBASE · AUTH":"FIREBASE";
-});
+$("#loginForm").addEventListener("submit",async e=>{e.preventDefault();msg("#loginMessage","Signing in…");try{await signInWithEmailAndPassword(auth,$("#email").value.trim(),$("#password").value);msg("#loginMessage","");}catch(x){msg("#loginMessage",friendly(x),"error");}});
+$("#logoutBtn").addEventListener("click",()=>signOut(auth));
+onAuthStateChanged(auth,u=>{$("#loginPanel").hidden=!!u;$("#dashboard").hidden=!u;$("#logoutBtn").hidden=!u;$("#userEmail").textContent=u?.email||"—";$("#connectionBadge").textContent=u?"FIREBASE · AUTH":"FIREBASE";});
 
-$("#newMatchBtn").addEventListener("click",resetMatchForm);
-$("#matchForm").addEventListener("submit",async e=>{
-  e.preventDefault();
-  const payload={
-    opponent:$("#opponent").value.trim(),
-    opponentCode:($("#opponentCode").value.trim()||"OPP").toUpperCase(),
-    opponentLogo:$("#opponentLogo").value.trim(),
-    kickoff:Timestamp.fromDate(new Date($("#kickoff").value)),
-    season:$("#season").value.trim()||"2026",
-    matchday:Number($("#matchday").value)||null,
-    matchType:$("#matchType").value.trim()||"Friendly Match",
-    venue:$("#venue").value.trim(),
-    status:$("#status").value,
-    homeScore:Math.max(0,Number($("#homeScore").value)||0),
-    awayScore:Math.max(0,Number($("#awayScore").value)||0),
-    updatedAt:serverTimestamp()
-  };
-  try{
-    const id=$("#matchId").value;
-    if(id) await updateDoc(doc(db,"matches",id),payload);
-    else await addDoc(collection(db,"matches"),{...payload,createdAt:serverTimestamp()});
-    setMsg("#matchMessage","Saved. Public site updates in realtime.","ok");
-    resetMatchForm();
-  }catch(err){
-    const msg=friendly(err);
-    setMsg("#matchMessage",msg,"error");
-    showToast("Firestore write failed: "+msg,"error");
-  }
-});
+$("#adminNav").addEventListener("click",e=>{const b=e.target.closest("[data-page]");if(b)page(b.dataset.page);});
+$$("[data-go]").forEach(b=>b.addEventListener("click",()=>page(b.dataset.go)));
+function page(n){$$("#adminNav [data-page]").forEach(b=>b.classList.toggle("active",b.dataset.page===n));$$(".admin-page").forEach(p=>p.classList.toggle("active",p.dataset.pagePanel===n));window.scrollTo({top:0,behavior:"smooth"});}
 
-onSnapshot(collection(db,"matches"),snap=>{
-  matches=snap.docs.map(d=>({id:d.id,...d.data()}));
-  const kickoffMs=m=>m.kickoff?.toMillis ? m.kickoff.toMillis() : new Date(m.kickoff||0).getTime();
-  matches.sort((x,y)=>kickoffMs(y)-kickoffMs(x));
-  renderMatches();
-  if(selectedMatchId) selectMatch(selectedMatchId,false);
-},err=>setMsg("#matchMessage",friendly(err),"error"));
+onSnapshot(collection(db,"matches"),s=>{matches=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>ms(b.kickoff)-ms(a.kickoff));renderMatches();overview();fillMatches();counts();if(selectedMatchId)selectLive(selectedMatchId);},e=>toast(friendly(e),"error"));
+onSnapshot(collection(db,"players"),s=>{players=s.docs.map(d=>({id:d.id,...d.data()})).sort(playerSort);renderPlayers();fillPlayers();counts();},e=>msg("#playerMessage",friendly(e),"error"));
+onSnapshot(collection(db,"opponents"),s=>{opponents=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.name||"").localeCompare(b.name||""));renderOpponents();fillOpponents();counts();},e=>msg("#opponentMessage",friendly(e),"error"));
+onSnapshot(collection(db,"events"),s=>{events=s.docs.map(d=>({id:d.id,...d.data()}));renderEvents();},e=>msg("#liveMessage",friendly(e),"error"));
+onSnapshot(collection(db,"media"),s=>{media=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>stamp(b)-stamp(a));renderMedia();counts();},e=>msg("#mediaMessage",friendly(e),"error"));
+onSnapshot(doc(db,"settings","public"),s=>{settings=s.exists()?s.data():{};applySettings();},()=>{});
 
-function renderMatches(){
-  const el=$("#matchAdminList");
-  if(!matches.length){el.innerHTML='<div class="empty">No Firestore matches yet.</div>';return;}
-  el.innerHTML=matches.map(m=>{
-    const date=m.kickoff?.toDate?m.kickoff.toDate().toLocaleDateString("en-MY",{day:"2-digit",month:"short",year:"numeric"}):"TBA";
-    return `<div class="admin-row">
-      <small>${date}<br>${esc(m.status||"UPCOMING")}</small>
-      <div><b>TEDU vs ${esc(m.opponent||"Opponent")}</b><small>${esc(m.venue||"Venue TBA")}</small></div>
-      <div class="score-mini">${m.homeScore??0}–${m.awayScore??0}</div>
-      <small>${esc(m.matchType||"Friendly")}</small>
-      <div class="row-actions"><button data-control="${m.id}">Control</button><button data-edit="${m.id}">Edit</button></div>
-    </div>`;
-  }).join("");
-  el.querySelectorAll("[data-control]").forEach(b=>b.addEventListener("click",()=>selectMatch(b.dataset.control,true)));
-  el.querySelectorAll("[data-edit]").forEach(b=>b.addEventListener("click",()=>editMatch(b.dataset.edit)));
-}
-function editMatch(id){
-  const m=matches.find(x=>x.id===id);if(!m)return;
-  $("#matchId").value=id;$("#opponent").value=m.opponent||"";$("#opponentCode").value=m.opponentCode||"";
-  $("#opponentLogo").value=m.opponentLogo||"";$("#season").value=m.season||"2026";$("#matchday").value=m.matchday||"";
-  $("#matchType").value=m.matchType||"Friendly Match";$("#venue").value=m.venue||"";$("#status").value=m.status||"UPCOMING";
-  $("#homeScore").value=m.homeScore??0;$("#awayScore").value=m.awayScore??0;
-  if(m.kickoff?.toDate){const d=m.kickoff.toDate();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());$("#kickoff").value=d.toISOString().slice(0,16);}
-  window.scrollTo({top:0,behavior:"smooth"});
-}
-function resetMatchForm(){
-  $("#matchForm").reset();$("#matchId").value="";$("#season").value="2026";$("#matchType").value="Friendly Match";$("#status").value="UPCOMING";$("#homeScore").value=0;$("#awayScore").value=0;
-}
-function selectMatch(id,scroll){
-  selectedMatchId=id;
-  const m=matches.find(x=>x.id===id);if(!m)return;
-  $("#noSelectedMatch").hidden=true;$("#liveControls").hidden=false;
-  $("#liveOpponent").textContent=`TEDU vs ${m.opponent||"Opponent"}`;$("#liveAwayCode").textContent=m.opponentCode||"OPP";
-  $("#liveMeta").textContent=`${m.matchType||"Friendly"} · ${m.venue||"Venue TBA"}`;
-  $("#liveHomeScore").textContent=m.homeScore??0;$("#liveAwayScore").textContent=m.awayScore??0;
-  $("#liveStatus").textContent=m.status||"UPCOMING";$("#liveStatus").classList.toggle("live",["LIVE","HT"].includes(m.status));
-  if(scroll) $("#liveControls").scrollIntoView({behavior:"smooth",block:"center"});
-}
-document.querySelectorAll("[data-score]").forEach(btn=>btn.addEventListener("click",async()=>{
-  if(!selectedMatchId)return;
-  const [side,deltaRaw]=btn.dataset.score.split(":");const delta=Number(deltaRaw);
-  const m=matches.find(x=>x.id===selectedMatchId);if(!m)return;
-  const key=side==="home"?"homeScore":"awayScore";const next=Math.max(0,(Number(m[key])||0)+delta);
-  try{await updateDoc(doc(db,"matches",selectedMatchId),{[key]:next,updatedAt:serverTimestamp()});}catch(err){setMsg("#liveMessage",friendly(err),"error");}
-}));
-document.querySelectorAll("[data-status]").forEach(btn=>btn.addEventListener("click",async()=>{
-  if(!selectedMatchId)return;
-  try{await updateDoc(doc(db,"matches",selectedMatchId),{status:btn.dataset.status,updatedAt:serverTimestamp()});}catch(err){setMsg("#liveMessage",friendly(err),"error");}
-}));
-$("#goalForm").addEventListener("submit",async e=>{
-  e.preventDefault();if(!selectedMatchId)return;
-  const m=matches.find(x=>x.id===selectedMatchId);if(!m)return;
-  const team=$("#goalTeam").value,scoreKey=team==="home"?"homeScore":"awayScore";
-  const event={type:"GOAL",team,scorer:$("#goalScorer").value.trim(),assist:$("#goalAssist").value.trim(),minute:Number($("#goalMinute").value)||null,createdAt:serverTimestamp()};
-  try{
-    const batch=writeBatch(db);
-    batch.update(doc(db,"matches",selectedMatchId),{[scoreKey]:(Number(m[scoreKey])||0)+1,status:"LIVE",updatedAt:serverTimestamp()});
-    const eventRef=doc(collection(db,"matches",selectedMatchId,"events"));batch.set(eventRef,event);
-    await batch.commit();e.target.reset();setMsg("#liveMessage","Goal recorded. Public score updated.","ok");
-  }catch(err){setMsg("#liveMessage",friendly(err),"error");}
-});
+function counts(){$("#countMatches").textContent=matches.length;$("#countPlayers").textContent=players.length;$("#countOpponents").textContent=opponents.length;$("#countMedia").textContent=media.length;}
+function overview(){const el=$("#overviewMatchList"),x=matches.slice(0,5);el.innerHTML=x.length?x.map(row).join(""):'<div class="empty">No matches yet.</div>';bindRows(el);}
 
-$("#playerForm").addEventListener("submit",async e=>{
-  e.preventDefault();
-  const payload={name:$("#playerName").value.trim(),position:$("#playerPosition").value.trim().toUpperCase(),number:$("#playerNumber").value.trim(),active:true,updatedAt:serverTimestamp()};
-  try{
-    const id=$("#playerId").value;
-    if(id) await updateDoc(doc(db,"players",id),payload); else await addDoc(collection(db,"players"),{...payload,createdAt:serverTimestamp()});
-    e.target.reset();$("#playerId").value="";setMsg("#playerMessage","Player saved.","ok");
-  }catch(err){setMsg("#playerMessage",friendly(err),"error");}
-});
-onSnapshot(collection(db,"players"),snap=>{
-  players=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.number||"99").localeCompare(b.number||"99",undefined,{numeric:true}));
-  $("#playerAdminList").innerHTML=players.map(p=>`<div class="player-admin"><div><b>#${esc(p.number||"—")} ${esc(p.name||"Player")}</b><small>${esc(p.position||"—")}</small></div><button data-del-player="${p.id}" title="Delete">✕</button></div>`).join("");
-  $("#playerAdminList").querySelectorAll("[data-del-player]").forEach(b=>b.addEventListener("click",async()=>{if(confirm("Delete this player?"))await deleteDoc(doc(db,"players",b.dataset.delPlayer));}));
-},err=>setMsg("#playerMessage",friendly(err),"error"));
+/* opponents */
+$("#opponentLogoFile").addEventListener("change",async e=>{const f=e.target.files?.[0];if(!f)return;try{toast("Compressing logo…");pendingOpponentLogo=await compress(f,420,.78,180000);preview("#opponentLogoPreview",pendingOpponentLogo);toast("Logo ready ✓","ok");}catch(x){toast(x.message,"error");}});
+$("#newOpponentBtn").addEventListener("click",resetOpponent);
+$("#opponentForm").addEventListener("submit",async e=>{e.preventDefault();const name=$("#opponentName").value.trim(),code=$("#opponentCode").value.trim().toUpperCase();if(!name||!code)return;const id=$("#opponentId").value||slug(name),logo=pendingOpponentLogo||editingOpponentLogo||"",data={name,code,logoData:logo,primaryColor:$("#opponentPrimary").value,secondaryColor:$("#opponentSecondary").value,notes:$("#opponentNotes").value.trim(),updatedAt:serverTimestamp()};try{await setDoc(doc(db,"opponents",id),data,{merge:true});const rel=matches.filter(m=>m.opponentId===id||(m.opponent||"").toLowerCase()===name.toLowerCase());if(rel.length){const b=writeBatch(db);rel.forEach(m=>b.update(doc(db,"matches",m.id),{opponentId:id,opponent:name,opponentCode:code,opponentLogo:logo,opponentPrimary:data.primaryColor,opponentSecondary:data.secondaryColor,updatedAt:serverTimestamp()}));await b.commit();}msg("#opponentMessage","Opponent saved. "+(rel.length?"Linked to "+rel.length+" old match(es).":""),"ok");toast("Opponent saved ✓","ok");resetOpponent();}catch(x){msg("#opponentMessage",friendly(x),"error");}});
+function renderOpponents(){const el=$("#opponentAdminList");el.innerHTML=opponents.length?opponents.map(o=>'<article class="opponent-card">'+(o.logoData?'<img src="'+o.logoData+'" alt="'+esc(o.name)+' logo">':'<div class="crest-placeholder">'+esc((o.code||"OP").slice(0,3))+'</div>')+'<div><h3>'+esc(o.name||"Opponent")+'</h3><small>'+esc(o.code||"")+'</small></div><div class="card-actions"><button class="secondary" data-eo="'+o.id+'">Edit</button><button class="secondary" data-do="'+o.id+'">Delete</button></div></article>').join(""):'<div class="empty">No opponents yet.</div>';el.querySelectorAll("[data-eo]").forEach(b=>b.onclick=()=>editOpponent(b.dataset.eo));el.querySelectorAll("[data-do]").forEach(b=>b.onclick=()=>deleteOpponent(b.dataset.do));}
+function editOpponent(id){const o=opponents.find(x=>x.id===id);if(!o)return;$("#opponentId").value=id;$("#opponentName").value=o.name||"";$("#opponentCode").value=o.code||"";$("#opponentPrimary").value=o.primaryColor||"#d52b1e";$("#opponentSecondary").value=o.secondaryColor||"#101010";$("#opponentNotes").value=o.notes||"";editingOpponentLogo=o.logoData||"";pendingOpponentLogo="";preview("#opponentLogoPreview",editingOpponentLogo);page("opponents");}
+async function deleteOpponent(id){const o=opponents.find(x=>x.id===id);if(!o||!confirm("Delete "+o.name+"? Existing matches keep their snapshot."))return;try{await deleteDoc(doc(db,"opponents",id));toast("Opponent deleted.","ok");}catch(x){toast(friendly(x),"error");}}
+function resetOpponent(){$("#opponentForm").reset();$("#opponentId").value="";$("#opponentPrimary").value="#d52b1e";$("#opponentSecondary").value="#101010";pendingOpponentLogo=editingOpponentLogo="";clearPreview("#opponentLogoPreview");}
 
-$("#seedSquadBtn").addEventListener("click",async()=>{
-  const squad=[
-    ["01","David","GK"],["04","Dilah","CB"],["05","McQuel","CB"],["02","Piteri","RB"],["03","Tarmizi","LB"],["06","Hadges","CDM"],["08","Mahathir","CDM"],["10","Wilson Ahon","CM"],["14","Chundi","CM"],["11","Zairy","LW"],["07","Hasif","RW"],["17","Iffat","RW"],["09","Aznel","AMF"],["16","Lamat","AMF"],["19","Rosbi","CF"],["21","Ronan","CF"]
-  ];
-  try{
-    const batch=writeBatch(db);
-    squad.forEach(([number,name,position])=>batch.set(doc(db,"players",slug(name)),{number,name,position,active:true,updatedAt:serverTimestamp()},{merge:true}));
-    await batch.commit();setMsg("#playerMessage","Current squad seeded.","ok");
-  }catch(err){setMsg("#playerMessage",friendly(err),"error");}
-});
-$("#seedMatchBtn").addEventListener("click",async()=>{
-  showToast("Saving KATMA result…");
-  try{
-    setMsg("#matchMessage","Saving KATMA result…");
-    await setDoc(doc(db,"matches","katma-2026-09-28"),{
-      opponent:"KATMA",opponentCode:"KAT",opponentLogo:"/assets/katma-placeholder.svg",
-      kickoff:Timestamp.fromDate(new Date("2026-09-28T16:30:00+08:00")),season:"2026",matchday:3,
-      matchType:"Friendly Match",venue:"Venue archived",status:"FT",homeScore:0,awayScore:2,updatedAt:serverTimestamp()
-    },{merge:true});
-    setMsg("#matchMessage","KATMA result seeded ✓ Check the Matches list below and refresh the public page.","ok");
-    showToast("KATMA result berjaya disimpan ke Firestore ✓","ok");
-  }catch(err){
-    const msg=friendly(err);
-    setMsg("#matchMessage",msg,"error");
-    showToast("Firestore write failed: "+msg,"error");
-  }
-});
+/* players */
+$("#playerPhotoFile").addEventListener("change",async e=>{const f=e.target.files?.[0];if(!f)return;try{toast("Compressing player photo…");pendingPlayerPhoto=await compress(f,560,.72,260000);preview("#playerPhotoPreview",pendingPlayerPhoto);toast("Player image ready ✓","ok");}catch(x){toast(x.message,"error");}});
+$("#newPlayerBtn").addEventListener("click",resetPlayer);
+$("#playerForm").addEventListener("submit",async e=>{e.preventDefault();const name=$("#playerName").value.trim(),position=$("#playerPosition").value.trim().toUpperCase();if(!name||!position)return;const id=$("#playerId").value||slug(name);try{await setDoc(doc(db,"players",id),{name,position,number:$("#playerNumber").value.trim(),active:$("#playerActive").value==="true",photoData:pendingPlayerPhoto||editingPlayerPhoto||"",updatedAt:serverTimestamp()},{merge:true});msg("#playerMessage","Player saved.","ok");toast("Player saved ✓","ok");resetPlayer();}catch(x){msg("#playerMessage",friendly(x),"error");}});
+function renderPlayers(){const el=$("#playerAdminList");el.innerHTML=players.length?players.map(p=>'<article class="player-admin">'+(p.photoData?'<img src="'+p.photoData+'" alt="'+esc(p.name)+'">':'<div class="player-thumb">'+initials(p.name)+'</div>')+'<div><b>#'+esc(p.number||"—")+' '+esc(p.name||"Player")+'</b><small>'+esc(p.position||"—")+' · '+(p.active===false?"Inactive":"Active")+'</small></div><div class="mini-actions"><button data-ep="'+p.id+'">Edit</button><button class="danger" data-dp="'+p.id+'">✕</button></div></article>').join(""):'<div class="empty">No players yet.</div>';el.querySelectorAll("[data-ep]").forEach(b=>b.onclick=()=>editPlayer(b.dataset.ep));el.querySelectorAll("[data-dp]").forEach(b=>b.onclick=()=>deletePlayer(b.dataset.dp));}
+function editPlayer(id){const p=players.find(x=>x.id===id);if(!p)return;$("#playerId").value=id;$("#playerName").value=p.name||"";$("#playerPosition").value=p.position||"";$("#playerNumber").value=p.number||"";$("#playerActive").value=String(p.active!==false);editingPlayerPhoto=p.photoData||"";pendingPlayerPhoto="";preview("#playerPhotoPreview",editingPlayerPhoto);page("players");}
+async function deletePlayer(id){const p=players.find(x=>x.id===id);if(!p||!confirm("Delete "+p.name+"? Historical data remains."))return;try{await deleteDoc(doc(db,"players",id));toast("Player deleted.","ok");}catch(x){toast(friendly(x),"error");}}
+function resetPlayer(){$("#playerForm").reset();$("#playerId").value="";$("#playerActive").value="true";pendingPlayerPhoto=editingPlayerPhoto="";clearPreview("#playerPhotoPreview");}
+$("#seedSquadBtn").addEventListener("click",async()=>{const s=[["01","David","GK"],["04","Dilah","CB"],["05","McQuel","CB"],["02","Piteri","RB"],["03","Tarmizi","LB"],["06","Hadges","CDM"],["08","Mahathir","CDM"],["10","Wilson Ahon","CM"],["14","Chundi","CM"],["11","Zairy","LW"],["07","Hasif","RW"],["17","Iffat","RW"],["09","Aznel","AMF"],["16","Lamat","AMF"],["19","Rosbi","CF"],["21","Ronan","CF"]];try{const b=writeBatch(db);s.forEach(a=>b.set(doc(db,"players",slug(a[1])),{number:a[0],name:a[1],position:a[2],active:true,updatedAt:serverTimestamp()},{merge:true}));await b.commit();toast("Squad seeded ✓","ok");}catch(x){toast(friendly(x),"error");}});
 
-function slug(s){return s.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");}
-function esc(v=""){return String(v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
-function setMsg(sel,text,type=""){const el=$(sel);if(!el)return;el.textContent=text;el.className="message "+type;}
-function showToast(text,type=""){
-  const el=$("#globalToast");
-  if(!el)return;
-  el.textContent=text;el.className="global-toast "+type;el.hidden=false;
-  clearTimeout(window.__toastTimer);
-  window.__toastTimer=setTimeout(()=>{el.hidden=true;},6000);
-}
-function friendly(err){const code=err?.code||"";if(code.includes("permission-denied"))return "Permission denied. Firestore admin UID rule is not active yet.";if(code.includes("invalid-credential"))return "Email or password is incorrect.";if(code.includes("operation-not-allowed"))return "Enable Email/Password in Firebase Authentication first.";return err?.message||"Something went wrong.";}
+/* match editor */
+$("#newMatchBtn").addEventListener("click",resetMatch);$("#cancelMatchEdit").addEventListener("click",resetMatch);
+$("#matchForm").addEventListener("submit",async e=>{e.preventDefault();const oid=$("#matchOpponentSelect").value,o=opponents.find(x=>x.id===oid),d=new Date($("#kickoff").value);if(!o){msg("#matchMessage","Choose opponent first.","error");return;}if(Number.isNaN(d.getTime())){msg("#matchMessage","Valid kick-off required.","error");return;}const motm=$("#motmPlayer").value,mp=players.find(x=>x.id===motm),st=values("#starters").slice(0,11),subs=values("#substitutes").filter(x=>!st.includes(x));const data={opponentId:oid,opponent:o.name,opponentCode:o.code,opponentLogo:o.logoData||"",opponentPrimary:o.primaryColor||"",opponentSecondary:o.secondaryColor||"",kickoff:Timestamp.fromDate(d),season:$("#season").value.trim()||String(d.getFullYear()),matchday:Number($("#matchday").value)||null,matchType:$("#matchType").value.trim()||"Friendly Match",venue:$("#venue").value.trim(),status:$("#status").value,publicVisible:$("#publicVisible").value==="true",homeScore:Math.max(0,Number($("#homeScore").value)||0),awayScore:Math.max(0,Number($("#awayScore").value)||0),formation:$("#formation").value.trim(),starters:st,substitutes:subs,motmPlayerId:motm||"",motmPlayerName:mp?.name||"",stats:stats(),updatedAt:serverTimestamp()};try{const id=$("#matchId").value;if(id)await updateDoc(doc(db,"matches",id),data);else await addDoc(collection(db,"matches"),{...data,createdAt:serverTimestamp()});msg("#matchMessage","Match saved. Public site updates realtime.","ok");toast("Match saved ✓","ok");resetMatch();}catch(x){msg("#matchMessage",friendly(x),"error");}});
+function stats(){const m={homeShots:"#statHomeShots",awayShots:"#statAwayShots",homeOnTarget:"#statHomeOnTarget",awayOnTarget:"#statAwayOnTarget",homeCorners:"#statHomeCorners",awayCorners:"#statAwayCorners",homeYellow:"#statHomeYellow",awayYellow:"#statAwayYellow"},o={};Object.entries(m).forEach(a=>{const v=$(a[1]).value;if(v!=="")o[a[0]]=Math.max(0,Number(v)||0);});return o;}
+function renderMatches(){const season=$("#adminSeasonFilter")?.value||"ALL",list=matches.filter(m=>season==="ALL"||String(m.season)===season),el=$("#matchAdminList");el.innerHTML=list.length?list.map(row).join(""):'<div class="empty">No matches for this season.</div>';bindRows(el);fillSeasons();}
+function row(m){const score=["LIVE","HT","FT"].includes(m.status)?String(m.homeScore??0)+"–"+String(m.awayScore??0):"VS";return '<div class="admin-row"><small>'+date(m.kickoff)+'<br>'+esc(m.status||"UPCOMING")+(m.publicVisible===false?" · HIDDEN":"")+'</small><div><b>TEDU vs '+esc(m.opponent||"Opponent")+'</b><small>'+esc(m.venue||"Venue TBA")+' · '+esc(m.season||"")+'</small></div><div class="score-mini">'+score+'</div><small>'+esc(m.matchType||"Friendly")+'</small><div class="row-actions"><button data-c="'+m.id+'">Control</button><button data-e="'+m.id+'">Edit</button><button class="'+(m.publicVisible===false?"":"active-toggle")+'" data-v="'+m.id+'">'+(m.publicVisible===false?"Show":"Hide")+'</button><button class="danger" data-d="'+m.id+'">Delete</button></div></div>';}
+function bindRows(root){root.querySelectorAll("[data-c]").forEach(b=>b.onclick=()=>{selectedMatchId=b.dataset.c;$("#liveMatchSelect").value=selectedMatchId;selectLive(selectedMatchId);page("live");});root.querySelectorAll("[data-e]").forEach(b=>b.onclick=()=>editMatch(b.dataset.e));root.querySelectorAll("[data-v]").forEach(b=>b.onclick=()=>toggleVisible(b.dataset.v));root.querySelectorAll("[data-d]").forEach(b=>b.onclick=()=>deleteMatch(b.dataset.d));}
+function editMatch(id){const m=matches.find(x=>x.id===id);if(!m)return;$("#matchId").value=id;$("#matchOpponentSelect").value=m.opponentId||opponents.find(o=>(o.name||"").toLowerCase()===(m.opponent||"").toLowerCase())?.id||"";$("#season").value=m.season||"2026";$("#matchday").value=m.matchday||"";$("#matchType").value=m.matchType||"Friendly Match";$("#venue").value=m.venue||"";$("#status").value=m.status||"UPCOMING";$("#publicVisible").value=String(m.publicVisible!==false);$("#homeScore").value=m.homeScore??0;$("#awayScore").value=m.awayScore??0;$("#formation").value=m.formation||"";$("#motmPlayer").value=m.motmPlayerId||"";if(m.kickoff?.toDate){const d=m.kickoff.toDate();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());$("#kickoff").value=d.toISOString().slice(0,16);}selectValues("#starters",m.starters||[]);selectValues("#substitutes",m.substitutes||[]);const s=m.stats||{};set("#statHomeShots",s.homeShots);set("#statAwayShots",s.awayShots);set("#statHomeOnTarget",s.homeOnTarget);set("#statAwayOnTarget",s.awayOnTarget);set("#statHomeCorners",s.homeCorners);set("#statAwayCorners",s.awayCorners);set("#statHomeYellow",s.homeYellow);set("#statAwayYellow",s.awayYellow);msg("#matchMessage","Editing TEDU vs "+(m.opponent||"Opponent"),"ok");page("matches");}
+function resetMatch(){$("#matchForm").reset();$("#matchId").value="";$("#season").value=settings.currentSeason||"2026";$("#matchType").value="Friendly Match";$("#status").value="UPCOMING";$("#publicVisible").value="true";$("#homeScore").value=0;$("#awayScore").value=0;selectValues("#starters",[]);selectValues("#substitutes",[]);msg("#matchMessage","");}
+async function toggleVisible(id){const m=matches.find(x=>x.id===id);if(m)try{await updateDoc(doc(db,"matches",id),{publicVisible:m.publicVisible===false,updatedAt:serverTimestamp()});}catch(x){toast(friendly(x),"error");}}
+async function deleteMatch(id){const m=matches.find(x=>x.id===id);if(!m||!confirm("Delete TEDU vs "+m.opponent+" and its timeline events?"))return;try{const b=writeBatch(db);events.filter(e=>e.matchId===id).forEach(e=>b.delete(doc(db,"events",e.id)));b.delete(doc(db,"matches",id));await b.commit();toast("Match deleted.","ok");}catch(x){toast(friendly(x),"error");}}
+$("#adminSeasonFilter").addEventListener("change",renderMatches);
+function fillSeasons(){const el=$("#adminSeasonFilter"),old=el.value||"ALL",ss=[...new Set(matches.map(m=>String(m.season||"")).filter(Boolean))].sort().reverse();el.innerHTML='<option value="ALL">All seasons</option>'+ss.map(s=>'<option value="'+esc(s)+'">'+esc(s)+'</option>').join("");el.value=ss.includes(old)?old:"ALL";}
+
+/* live */
+$("#liveMatchSelect").addEventListener("change",e=>{selectedMatchId=e.target.value;selectLive(selectedMatchId);});
+function selectLive(id){const m=matches.find(x=>x.id===id);$("#noSelectedMatch").hidden=!!m;$("#liveControls").hidden=!m;if(!m){$("#liveStatus").textContent="NO MATCH";return;}$("#liveOpponent").textContent="TEDU vs "+(m.opponent||"Opponent");$("#liveAwayCode").textContent=m.opponentCode||"OPP";$("#liveMeta").textContent=(m.matchType||"Friendly")+" · "+(m.venue||"Venue TBA");$("#liveHomeScore").textContent=m.homeScore??0;$("#liveAwayScore").textContent=m.awayScore??0;$("#liveStatus").textContent=m.status||"UPCOMING";$("#liveStatus").classList.toggle("live",["LIVE","HT"].includes(m.status));renderEvents();}
+$$("[data-score]").forEach(b=>b.onclick=async()=>{const m=matches.find(x=>x.id===selectedMatchId);if(!m)return;const a=b.dataset.score.split(":"),k=a[0]==="home"?"homeScore":"awayScore",n=Math.max(0,(Number(m[k])||0)+Number(a[1]));try{await updateDoc(doc(db,"matches",m.id),{[k]:n,updatedAt:serverTimestamp()});}catch(x){toast(friendly(x),"error");}});
+$$("[data-status]").forEach(b=>b.onclick=async()=>{if(selectedMatchId)try{await updateDoc(doc(db,"matches",selectedMatchId),{status:b.dataset.status,updatedAt:serverTimestamp()});}catch(x){toast(friendly(x),"error");}});
+$("#eventForm").addEventListener("submit",async e=>{e.preventDefault();const m=matches.find(x=>x.id===selectedMatchId);if(!m){msg("#liveMessage","Choose match first.","error");return;}const type=$("#eventType").value,team=$("#eventTeam").value,pid=$("#eventPlayer").value,sid=$("#eventSecondary").value,p=players.find(x=>x.id===pid),p2=players.find(x=>x.id===sid),ev={matchId:m.id,type,team,playerId:pid||"",playerName:p?.name||"",secondaryPlayerId:sid||"",secondaryPlayerName:p2?.name||"",minute:Number($("#eventMinute").value)||null,note:$("#eventNote").value.trim(),opponent:m.opponent||"",season:m.season||"",createdAt:serverTimestamp()};try{const ref=doc(collection(db,"events")),b=writeBatch(db);b.set(ref,ev);if(type==="GOAL"){const k=team==="home"?"homeScore":"awayScore";b.update(doc(db,"matches",m.id),{[k]:(Number(m[k])||0)+1,status:"LIVE",updatedAt:serverTimestamp()});}await b.commit();e.target.reset();$("#eventTeam").value="home";toast(type==="GOAL"?"GOAL recorded ⚽":"Event recorded ✓","ok");}catch(x){msg("#liveMessage",friendly(x),"error");}});
+function renderEvents(){const el=$("#eventAdminList");if(!el)return;const list=events.filter(e=>e.matchId===selectedMatchId).sort((a,b)=>(a.minute??999)-(b.minute??999)||stamp(a)-stamp(b));el.innerHTML=list.length?list.map(e=>'<div class="event-row"><b>'+(e.minute?e.minute+"'":"—")+'</b><small>'+icon(e.type)+' '+esc(e.type||"EVENT")+'</small><div><b>'+esc(desc(e))+'</b><small>'+esc(e.note||"")+'</small></div><button data-de="'+e.id+'">Delete</button></div>').join(""):'<div class="empty">No timeline events.</div>';el.querySelectorAll("[data-de]").forEach(b=>b.onclick=()=>deleteEvent(b.dataset.de));}
+async function deleteEvent(id){const e=events.find(x=>x.id===id);if(!e||!confirm("Delete this event?"))return;try{const b=writeBatch(db);b.delete(doc(db,"events",id));if(e.type==="GOAL"){const m=matches.find(x=>x.id===e.matchId);if(m){const k=e.team==="home"?"homeScore":"awayScore";b.update(doc(db,"matches",m.id),{[k]:Math.max(0,(Number(m[k])||0)-1),updatedAt:serverTimestamp()});}}await b.commit();}catch(x){toast(friendly(x),"error");}}
+function desc(e){if(e.type==="GOAL")return e.team==="home"?(e.playerName||"TEDU goal")+(e.secondaryPlayerName?" · Assist "+e.secondaryPlayerName:""):(e.note||e.opponent+" goal");if(e.type==="SUB")return (e.playerName||"Player out")+" → "+(e.secondaryPlayerName||"Player in");if(e.type==="YELLOW"||e.type==="RED")return e.team==="home"?(e.playerName||"TEDU"):(e.note||e.opponent);return e.note||e.playerName||"Match note";}
+function icon(t){return({GOAL:"⚽",YELLOW:"🟨",RED:"🟥",SUB:"🔄",NOTE:"•"})[t]||"•";}
+
+/* media */
+$("#mediaFile").addEventListener("change",async e=>{const f=e.target.files?.[0];if(!f)return;try{toast("Compressing gallery photo…");pendingMediaImage=await compress(f,1100,.68,520000);preview("#mediaPreview",pendingMediaImage);toast("Media ready ✓","ok");}catch(x){toast(x.message,"error");}});
+$("#mediaForm").addEventListener("submit",async e=>{e.preventDefault();if(!pendingMediaImage){msg("#mediaMessage","Choose photo first.","error");return;}try{await addDoc(collection(db,"media"),{title:$("#mediaTitle").value.trim(),caption:$("#mediaCaption").value.trim(),imageData:pendingMediaImage,matchId:$("#mediaMatch").value||"",visible:$("#mediaVisible").value==="true",createdAt:serverTimestamp(),updatedAt:serverTimestamp()});e.target.reset();pendingMediaImage="";clearPreview("#mediaPreview");toast("Media added ✓","ok");}catch(x){msg("#mediaMessage",friendly(x),"error");}});
+function renderMedia(){const el=$("#mediaAdminList");el.innerHTML=media.length?media.map(x=>'<article class="media-admin-card"><img src="'+x.imageData+'" alt="'+esc(x.title||"Media")+'"><div><b>'+esc(x.title||"Media")+'</b><small>'+(x.visible===false?"Hidden":"Public")+'</small><button data-tm="'+x.id+'">'+(x.visible===false?"Show":"Hide")+'</button> <button data-dm="'+x.id+'">Delete</button></div></article>').join(""):'<div class="empty">No media yet.</div>';el.querySelectorAll("[data-tm]").forEach(b=>b.onclick=()=>toggleMedia(b.dataset.tm));el.querySelectorAll("[data-dm]").forEach(b=>b.onclick=()=>deleteMedia(b.dataset.dm));}
+async function toggleMedia(id){const x=media.find(m=>m.id===id);if(x)try{await updateDoc(doc(db,"media",id),{visible:x.visible===false,updatedAt:serverTimestamp()});}catch(e){toast(friendly(e),"error");}}
+async function deleteMedia(id){if(confirm("Delete gallery item?"))try{await deleteDoc(doc(db,"media",id));}catch(e){toast(friendly(e),"error");}}
+
+/* settings + backup */
+$("#settingsForm").addEventListener("submit",async e=>{e.preventDefault();const d={currentSeason:$("#settingCurrentSeason").value.trim()||"2026",showSquad:$("#settingShowSquad").checked,showStats:$("#settingShowStats").checked,showH2H:$("#settingShowH2H").checked,showMedia:$("#settingShowMedia").checked,showArchive:$("#settingShowArchive").checked,updatedAt:serverTimestamp()};try{await setDoc(doc(db,"settings","public"),d,{merge:true});msg("#settingsMessage","Settings saved.","ok");toast("Settings saved ✓","ok");}catch(x){msg("#settingsMessage",friendly(x),"error");}});
+function applySettings(){$("#settingCurrentSeason").value=settings.currentSeason||"2026";$("#settingShowSquad").checked=settings.showSquad!==false;$("#settingShowStats").checked=settings.showStats!==false;$("#settingShowH2H").checked=settings.showH2H!==false;$("#settingShowMedia").checked=settings.showMedia!==false;$("#settingShowArchive").checked=settings.showArchive!==false;}
+$("#exportBackupBtn").addEventListener("click",()=>{const data={exportedAt:new Date().toISOString(),version:"1.0",matches:clean(matches),events:clean(events),opponents:clean(opponents),players:clean(players),media:clean(media),settings:clean(settings)},blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"}),u=URL.createObjectURL(blob),a=document.createElement("a");a.href=u;a.download="tebakang-edu-club-hub-backup-"+new Date().toISOString().slice(0,10)+".json";a.click();URL.revokeObjectURL(u);});
+
+/* seeds */
+$("#seedMatchBtn").addEventListener("click",async()=>{try{const k=opponents.find(o=>(o.name||"").toUpperCase()==="KATMA");await setDoc(doc(db,"matches","katma-2026-09-28"),{opponentId:k?.id||"",opponent:"KATMA",opponentCode:k?.code||"KAT",opponentLogo:k?.logoData||"/assets/katma-placeholder.svg",kickoff:Timestamp.fromDate(new Date("2026-09-28T16:30:00+08:00")),season:"2026",matchday:3,matchType:"Friendly Match",venue:"Venue archived",status:"FT",homeScore:0,awayScore:2,publicVisible:true,updatedAt:serverTimestamp()},{merge:true});toast("KATMA result saved ✓","ok");}catch(x){toast(friendly(x),"error");}});
+
+/* selects */
+function fillOpponents(){const el=$("#matchOpponentSelect"),old=el.value;el.innerHTML='<option value="">Choose opponent</option>'+opponents.map(o=>'<option value="'+o.id+'">'+esc(o.name)+' ('+esc(o.code||"")+')</option>').join("");if(opponents.some(o=>o.id===old))el.value=old;}
+function fillPlayers(){const act=players.filter(p=>p.active!==false),opts=act.map(p=>'<option value="'+p.id+'">#'+esc(p.number||"—")+' '+esc(p.name)+' · '+esc(p.position||"")+'</option>').join("");["#starters","#substitutes","#motmPlayer","#eventPlayer","#eventSecondary"].forEach(sel=>{const el=$(sel);if(!el)return,old=values(sel);el.innerHTML=(el.multiple?"":'<option value="">Not selected</option>')+opts;if(el.multiple)selectValues(sel,old);else if(old[0]&&act.some(p=>p.id===old[0]))el.value=old[0];});}
+function fillMatches(){const opts=matches.map(m=>'<option value="'+m.id+'">'+date(m.kickoff)+' · TEDU vs '+esc(m.opponent||"Opponent")+' · '+esc(m.status||"")+'</option>').join(""),lo=$("#liveMatchSelect").value,mo=$("#mediaMatch").value;$("#liveMatchSelect").innerHTML='<option value="">Choose match</option>'+opts;$("#mediaMatch").innerHTML='<option value="">None</option>'+opts;if(matches.some(m=>m.id===lo))$("#liveMatchSelect").value=lo;if(matches.some(m=>m.id===mo))$("#mediaMatch").value=mo;}
+
+/* image compression */
+async function compress(file,maxDim=600,q=.72,target=280000){if(!file.type.startsWith("image/"))throw new Error("Choose an image file.");const u=URL.createObjectURL(file);try{const im=await new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=()=>rej(new Error("Could not read image."));i.src=u;}),scale=Math.min(1,maxDim/Math.max(im.naturalWidth,im.naturalHeight)),w=Math.max(1,Math.round(im.naturalWidth*scale)),h=Math.max(1,Math.round(im.naturalHeight*scale)),c=document.createElement("canvas");c.width=w;c.height=h;c.getContext("2d").drawImage(im,0,0,w,h);let data=c.toDataURL("image/webp",q);while(data.length>target&&q>.38){q-=.08;data=c.toDataURL("image/webp",q);}if(data.length>780000)throw new Error("Image still too large.");return data;}finally{URL.revokeObjectURL(u);}}
+function preview(sel,src){if(src)$(sel).src=src;else clearPreview(sel);}function clearPreview(sel){$(sel)?.removeAttribute("src");}
+
+/* helpers */
+function ms(t){return t?.toMillis?t.toMillis():new Date(t||0).getTime()||0;}function stamp(x){return x.createdAt?.toMillis?x.createdAt.toMillis():x.updatedAt?.toMillis?x.updatedAt.toMillis():0;}
+function date(t){const d=t?.toDate?t.toDate():t?new Date(t):null;return d&&!Number.isNaN(d.getTime())?d.toLocaleDateString("en-MY",{day:"2-digit",month:"short",year:"numeric"}):"TBA";}
+function playerSort(a,b){return(a.number||"999").localeCompare(b.number||"999",undefined,{numeric:true})||(a.name||"").localeCompare(b.name||"");}
+function values(sel){const e=$(sel);if(!e)return[];return e.multiple?Array.from(e.selectedOptions).map(o=>o.value):[e.value].filter(Boolean);}function selectValues(sel,v){const s=new Set(v||[]);Array.from($(sel).options).forEach(o=>o.selected=s.has(o.value));}
+function set(sel,v){$(sel).value=v===undefined||v===null?"":v;}function slug(s){return String(s||"").toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")||"item-"+Date.now();}
+function initials(n=""){return n.split(/\s+/).filter(Boolean).slice(0,2).map(x=>x[0]).join("").toUpperCase()||"P";}function esc(v=""){return String(v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+function msg(sel,text,type=""){const e=$(sel);if(e){e.textContent=text;e.className="message "+type;}}function toast(text,type=""){const e=$("#globalToast");if(!e)return;e.textContent=text;e.className="global-toast "+type;e.hidden=false;clearTimeout(window.__toastTimer);window.__toastTimer=setTimeout(()=>e.hidden=true,5000);}
+function friendly(e){const c=e?.code||"";if(c.includes("permission-denied"))return"Permission denied. Check Firestore Rules/admin UID.";if(c.includes("invalid-credential"))return"Email or password incorrect.";if(c.includes("operation-not-allowed"))return"Enable Email/Password Authentication.";if(c.includes("resource-exhausted"))return"Firebase quota/document size limit reached.";return e?.message||"Something went wrong.";}
+function clean(v){if(v?.toDate)return v.toDate().toISOString();if(Array.isArray(v))return v.map(clean);if(v&&typeof v==="object"){const o={};Object.entries(v).forEach(a=>o[a[0]]=clean(a[1]));return o;}return v;}
