@@ -1,0 +1,25 @@
+name: Package Club Hub Source
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+      - name: Upload deploy source
+        uses: actions/upload-artifact@v4
+        with:
+          name: tebakang-club-hub-source
+          path: |
+            .
+            !.git
+          include-hidden-files: true
+          retention-days: 1
