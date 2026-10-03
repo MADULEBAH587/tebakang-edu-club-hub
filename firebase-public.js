@@ -3,7 +3,7 @@ import { getFirestore, collection, doc, onSnapshot } from "https://www.gstatic.c
 import { firebaseConfig } from "./firebase-config.js";
 
 const app=initializeApp(firebaseConfig),db=getFirestore(app),$=s=>document.querySelector(s);
-let matches=[],players=[],events=[],media=[],settings={},seasonFilter="ALL",nextKickoff=0,scoreMemory=new Map(),goalTimer=null;
+let matches=[],players=[],events=[],media=[],settings={},seasonFilter="ALL",nextKickoff=0,scoreMemory=new Map(),goalTimer=null,selectedPublicMatchId="";
 
 onSnapshot(collection(db,"matches"),snap=>{
   const fresh=snap.docs.map(d=>({id:d.id,...d.data()})).filter(m=>m.publicVisible!==false).sort((a,b)=>ms(b.kickoff)-ms(a.kickoff));
@@ -29,7 +29,7 @@ function renderVisibility(){
   $("#h2h").classList.toggle("public-hidden",settings.showH2H===false);$("#media").classList.toggle("public-hidden",settings.showMedia===false);$("#matches").classList.toggle("public-hidden",settings.showArchive===false);
 }
 function currentSeason(){return String(settings.currentSeason||matches.map(m=>String(m.season||"")).filter(Boolean).sort().reverse()[0]||"2026");}
-function activeMatch(){const live=matches.find(m=>["LIVE","HT","MATCHDAY"].includes(m.status));if(live)return live;const ft=matches.find(m=>m.status==="FT");if(ft)return ft;const now=Date.now();return [...matches].filter(m=>ms(m.kickoff)>=now).sort((a,b)=>ms(a.kickoff)-ms(b.kickoff))[0]||matches[0];}
+function activeMatch(){const chosen=matches.find(m=>m.id===selectedPublicMatchId);if(chosen)return chosen;const live=matches.find(m=>["LIVE","HT","MATCHDAY"].includes(m.status));if(live)return live;const ft=matches.find(m=>m.status==="FT");if(ft)return ft;const now=Date.now();return [...matches].filter(m=>ms(m.kickoff)>=now).sort((a,b)=>ms(a.kickoff)-ms(b.kickoff))[0]||matches[0];}
 
 function renderMainMatch(){
   const m=activeMatch();if(!m)return;
@@ -76,7 +76,8 @@ function renderForm(){
 function renderSeasons(){const el=$("#seasonFilter"),old=seasonFilter,ss=[...new Set(matches.map(m=>String(m.season||"")).filter(Boolean))].sort().reverse();el.innerHTML='<option value="ALL">All seasons</option>'+ss.map(s=>'<option value="'+esc(s)+'">'+esc(s)+'</option>').join("");el.value=ss.includes(old)?old:"ALL";}
 function renderArchive(){
   const el=$("#matchList"),list=matches.filter(m=>seasonFilter==="ALL"||String(m.season)===seasonFilter);
-  el.innerHTML=list.length?list.map(m=>{const d=toDate(m.kickoff),day=d?String(d.getDate()).padStart(2,"0"):"—",mon=d?d.toLocaleString("en-MY",{month:"short"}).toUpperCase():"TBA",score=m.status==="FT"||["LIVE","HT"].includes(m.status)?String(m.homeScore??0)+' <small>'+esc(m.status||"")+'</small> '+String(m.awayScore??0):'— <small>'+esc(m.status||"UPCOMING")+'</small> —',logo=m.opponentLogo?'<img src="'+m.opponentLogo+'" alt="'+esc(m.opponent||"Opponent")+'">':'<div class="initial-crest">'+esc((m.opponentCode||"OP").slice(0,2))+'</div>';return '<article class="match-row '+(m.status==="FT"?"featured":"muted")+'"><div class="match-date"><b>'+day+'</b><span>'+mon+'</span></div><img src="./assets/tebakang-edu-logo.webp" alt="Tebakang Educator FC"><strong>Tebakang Edu</strong><div class="row-score">'+score+'</div><strong>'+esc(m.opponent||"Opponent")+'</strong>'+logo+'<span class="match-type">'+esc(m.matchType||"Friendly")+'</span></article>';}).join(""):'<p class="empty-state">No matches in this season.</p>';
+  el.innerHTML=list.length?list.map(m=>{const d=toDate(m.kickoff),day=d?String(d.getDate()).padStart(2,"0"):"—",mon=d?d.toLocaleString("en-MY",{month:"short"}).toUpperCase():"TBA",score=m.status==="FT"||["LIVE","HT"].includes(m.status)?String(m.homeScore??0)+' <small>'+esc(m.status||"")+'</small> '+String(m.awayScore??0):'— <small>'+esc(m.status||"UPCOMING")+'</small> —',logo=m.opponentLogo?'<img src="'+m.opponentLogo+'" alt="'+esc(m.opponent||"Opponent")+'">':'<div class="initial-crest">'+esc((m.opponentCode||"OP").slice(0,2))+'</div>';return '<article class="match-row '+(m.status==="FT"?"featured":"muted")+'" data-open-match="'+m.id+'" tabindex="0"><div class="match-date"><b>'+day+'</b><span>'+mon+'</span></div><img src="./assets/tebakang-edu-logo.webp" alt="Tebakang Educator FC"><strong>Tebakang Edu</strong><div class="row-score">'+score+'</div><strong>'+esc(m.opponent||"Opponent")+'</strong>'+logo+'<span class="match-type">'+esc(m.matchType||"Friendly")+'</span></article>';}).join(""):'<p class="empty-state">No matches in this season.</p>';
+  el.querySelectorAll("[data-open-match]").forEach(card=>{const open=()=>{selectedPublicMatchId=card.dataset.openMatch;renderMainMatch();document.getElementById("match-centre").scrollIntoView({behavior:"smooth",block:"start"});};card.addEventListener("click",open);card.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" ")open();});});
 }
 
 function renderH2H(){
@@ -93,7 +94,8 @@ function playerStats(season){
 }
 function renderSquad(){
   if(!players.length)return;const season=currentSeason(),st=playerStats(season),el=$("#playerGrid");
-  el.innerHTML=players.map((p,i)=>{const s=st.get(p.id)||{apps:0,goals:0,assists:0},visual=p.photoData?'<img src="'+p.photoData+'" alt="'+esc(p.name)+'">':'<div class="player-avatar">'+initials(p.name)+'</div>';return '<article class="player-card" style="transition-delay:'+Math.min(i*25,200)+'ms"><div class="player-visual">'+visual+'</div><div class="player-body"><div class="player-no">'+esc(p.number||"—")+'</div><span class="player-pos">'+esc(p.position||"PLAYER")+'</span><h3>'+esc((p.name||"Player").toUpperCase())+'</h3><div class="player-stats"><div><b>'+s.apps+'</b>APPS</div><div><b>'+s.goals+'</b>GOALS</div><div><b>'+s.assists+'</b>ASSISTS</div></div></div></article>';}).join("");
+  el.innerHTML=players.map((p,i)=>{const s=st.get(p.id)||{apps:0,goals:0,assists:0},visual=p.photoData?'<img src="'+p.photoData+'" alt="'+esc(p.name)+'">':'<div class="player-avatar">'+initials(p.name)+'</div>';return '<article class="player-card" data-player="'+p.id+'" tabindex="0" style="transition-delay:'+Math.min(i*25,200)+'ms"><div class="player-visual">'+visual+'</div><div class="player-body"><div class="player-no">'+esc(p.number||"—")+'</div><span class="player-pos">'+esc(p.position||"PLAYER")+'</span><h3>'+esc((p.name||"Player").toUpperCase())+'</h3><div class="player-stats"><div><b>'+s.apps+'</b>APPS</div><div><b>'+s.goals+'</b>GOALS</div><div><b>'+s.assists+'</b>ASSISTS</div></div></div></article>';}).join("");
+  el.querySelectorAll("[data-player]").forEach(card=>{const open=()=>openPlayer(card.dataset.player);card.addEventListener("click",open);card.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" ")open();});});
 }
 function renderClubStats(){
   const season=currentSeason(),list=matches.filter(m=>m.status==="FT"&&String(m.season)===season),p=list.length,w=list.filter(m=>m.homeScore>m.awayScore).length,d=list.filter(m=>m.homeScore===m.awayScore).length,l=p-w-d,gf=list.reduce((n,m)=>n+Number(m.homeScore||0),0),ga=list.reduce((n,m)=>n+Number(m.awayScore||0),0),grid=$("#clubStatGrid");
@@ -116,6 +118,18 @@ function renderTicker(){
 function showGoal(m){
   const o=$("#goalOverlay");$("#goalOverlayName").textContent="TEBAKANG EDU";const ev=[...events].filter(e=>e.matchId===m.id&&e.type==="GOAL"&&e.team==="home").sort((a,b)=>stamp(b)-stamp(a))[0];$("#goalOverlayMinute").textContent=ev?(ev.minute?ev.minute+"' · ":"")+(ev.playerName||"GOAL"):"GOAL";o.hidden=false;clearTimeout(goalTimer);goalTimer=setTimeout(()=>o.hidden=true,2600);
 }
+
+
+$("#closePlayerModal").addEventListener("click",()=>$("#playerModal").close());
+$("#playerModal").addEventListener("click",e=>{if(e.target===$("#playerModal"))$("#playerModal").close();});
+function openPlayer(id){
+  const p=players.find(x=>x.id===id);if(!p)return;const season=currentSeason(),ss=playerStats(season).get(id)||{apps:0,goals:0,assists:0,motm:0},seasons=[...new Set(matches.map(m=>String(m.season||"")).filter(Boolean))].sort().reverse();
+  let all={apps:0,goals:0,assists:0,motm:0};const rows=seasons.map(y=>{const s=playerStats(y).get(id)||{apps:0,goals:0,assists:0,motm:0};all.apps+=s.apps;all.goals+=s.goals;all.assists+=s.assists;all.motm+=s.motm;return '<div class="career-row"><b>'+esc(y)+'</b><span>'+s.apps+' Apps</span><span>'+s.goals+' Goals</span><span>'+s.assists+' Assists</span></div>';}).join("");
+  const visual=p.photoData?'<img src="'+p.photoData+'" alt="'+esc(p.name)+'">':'<div class="profile-avatar">'+initials(p.name)+'</div>';
+  $("#playerModalContent").innerHTML='<div class="profile-wrap"><div class="profile-photo">'+visual+'</div><div class="profile-copy"><span class="kicker">PLAYER PROFILE</span><h2>'+esc(p.name)+'</h2><div class="meta">'+esc(p.position||"PLAYER")+' · #'+esc(p.number||"—")+'</div><div class="profile-stat-grid"><article><b>'+ss.apps+'</b><span>'+esc(season)+' APPS</span></article><article><b>'+ss.goals+'</b><span>GOALS</span></article><article><b>'+ss.assists+'</b><span>ASSISTS</span></article><article><b>'+ss.motm+'</b><span>MOTM</span></article></div><div class="career-list"><span class="kicker">CAREER · '+all.apps+' APPS · '+all.goals+' GOALS</span>'+rows+'</div></div></div>';
+  $("#playerModal").showModal();
+}
+$("#shareMatchBtn").addEventListener("click",async()=>{const m=activeMatch();if(!m)return;const score=m.status==="FT"||["LIVE","HT"].includes(m.status)?" "+(m.homeScore??0)+"–"+(m.awayScore??0)+" ":" vs ",text="Tebakang Edu"+score+(m.opponent||"Opponent")+" · "+statusText(m.status);try{if(navigator.share)await navigator.share({title:"Tebakang Edu Club Hub",text,url:location.href});else{await navigator.clipboard.writeText(text+" "+location.href);$("#shareMatchBtn").textContent="Copied ✓";setTimeout(()=>$("#shareMatchBtn").textContent="Share ↗",1800);}}catch(e){};});
 
 function eventDesc(e){if(e.type==="GOAL")return e.team==="home"?(e.playerName||"Tebakang Edu goal")+(e.secondaryPlayerName?" · Assist "+e.secondaryPlayerName:""):(e.note||e.opponent+" goal");if(e.type==="SUB")return(e.playerName||"Player out")+" → "+(e.secondaryPlayerName||"Player in");if(e.type==="YELLOW"||e.type==="RED")return e.team==="home"?(e.playerName||"Tebakang Edu"):(e.note||e.opponent);return e.note||e.playerName||"Match note";}
 function icon(t){return({GOAL:"⚽",YELLOW:"🟨",RED:"🟥",SUB:"🔄",NOTE:"•"})[t]||"•";}function statusText(s){return({UPCOMING:"UPCOMING",MATCHDAY:"MATCHDAY",LIVE:"LIVE",HT:"HALF TIME",FT:"FULL TIME"})[s]||s||"UPCOMING";}
