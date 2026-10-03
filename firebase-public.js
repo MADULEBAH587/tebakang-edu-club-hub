@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
-import { getFirestore, collection, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+import { getFirestore, collection, doc, onSnapshot, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
 
 const app=initializeApp(firebaseConfig),db=getFirestore(app),$=s=>document.querySelector(s);
@@ -15,7 +15,7 @@ onSnapshot(collection(db,"matches"),snap=>{
 
 onSnapshot(collection(db,"players"),snap=>{players=snap.docs.map(d=>({id:d.id,...d.data()})).filter(p=>p.active!==false).sort(playerSort);renderAll();},e=>console.warn("players",e.code||e.message));
 onSnapshot(collection(db,"events"),snap=>{events=snap.docs.map(d=>({id:d.id,...d.data()}));renderAll();},e=>console.warn("events",e.code||e.message));
-onSnapshot(collection(db,"media"),snap=>{media=snap.docs.map(d=>({id:d.id,...d.data()})).filter(x=>x.visible!==false).sort((a,b)=>stamp(b)-stamp(a));renderMedia();},e=>console.warn("media",e.code||e.message));
+onSnapshot(query(collection(db,"media"),orderBy("createdAt","desc"),limit(12)),snap=>{media=snap.docs.map(d=>({id:d.id,...d.data()})).filter(x=>x.visible!==false);renderMedia();},e=>console.warn("media",e.code||e.message));
 onSnapshot(doc(db,"settings","public"),snap=>{settings=snap.exists()?snap.data():{};renderAll();},()=>{});
 
 $("#seasonFilter").addEventListener("change",e=>{seasonFilter=e.target.value;renderArchive();});
@@ -88,8 +88,17 @@ function renderH2H(){
 
 function playerStats(season){
   const map=new Map(players.map(p=>[p.id,{apps:0,goals:0,assists:0,motm:0}]));
-  matches.filter(m=>m.status==="FT"&&String(m.season)===String(season)).forEach(m=>{[...(m.starters||[]),...(m.substitutes||[])].forEach(id=>{if(map.has(id))map.get(id).apps++;});if(m.motmPlayerId&&map.has(m.motmPlayerId))map.get(m.motmPlayerId).motm++;});
-  events.filter(e=>String(e.season)===String(season)&&e.team==="home").forEach(e=>{if(e.type==="GOAL"&&map.has(e.playerId))map.get(e.playerId).goals++;if(e.type==="GOAL"&&map.has(e.secondaryPlayerId))map.get(e.secondaryPlayerId).assists++;});
+  const done=matches.filter(m=>m.status==="FT"&&String(m.season)===String(season));
+  done.forEach(m=>{
+    const appeared=new Set(m.starters||[]);
+    events.filter(e=>e.matchId===m.id&&e.type==="SUB"&&e.team==="home"&&e.secondaryPlayerId).forEach(e=>appeared.add(e.secondaryPlayerId));
+    appeared.forEach(id=>{if(map.has(id))map.get(id).apps++;});
+    if(m.motmPlayerId&&map.has(m.motmPlayerId))map.get(m.motmPlayerId).motm++;
+  });
+  events.filter(e=>String(e.season)===String(season)&&e.team==="home").forEach(e=>{
+    if(e.type==="GOAL"&&map.has(e.playerId))map.get(e.playerId).goals++;
+    if(e.type==="GOAL"&&map.has(e.secondaryPlayerId))map.get(e.secondaryPlayerId).assists++;
+  });
   return map;
 }
 function renderSquad(){
