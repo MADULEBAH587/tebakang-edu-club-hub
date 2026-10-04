@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#07130f">
   <title>Club Hub Admin · Tebakang Edu</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -12,15 +12,8 @@
 </head>
 <body>
   <header class="admin-topbar">
-    <a class="admin-brand" href="/">
-      <img src="/assets/tebakang-edu-logo.webp" alt="Tebakang Educator FC">
-      <div><strong>TEBAKANG EDU</strong><span>CLUB HUB ADMIN · v1.0</span></div>
-    </a>
-    <div class="top-actions">
-      <span id="connectionBadge" class="badge">FIREBASE</span>
-      <button id="logoutBtn" class="text-btn" hidden>Log out</button>
-      <a class="text-btn" href="/">Public site ↗</a>
-    </div>
+    <a class="admin-brand" href="/"><img src="/assets/tebakang-edu-logo.webp" alt="Tebakang Educator FC"><div><strong>TEBAKANG EDU</strong><span>CLUB HUB ADMIN · v2</span></div></a>
+    <div class="top-actions"><span id="connectionBadge" class="badge">FIREBASE</span><a class="text-btn" href="/">Public site ↗</a></div>
   </header>
 
   <div id="globalToast" class="global-toast" hidden></div>
@@ -28,285 +21,182 @@
   <main class="admin-shell">
     <section id="loginPanel" class="auth-wrap">
       <div class="auth-card">
-        <span class="eyebrow">ADMIN ACCESS</span>
-        <h1>Club Hub Control Room</h1>
-        <p>Manage matches, live events, opponents, players and club media from one place.</p>
-        <form id="loginForm">
-          <label>Email<input id="email" type="email" autocomplete="username" required></label>
-          <label>Password<input id="password" type="password" autocomplete="current-password" required></label>
-          <button class="primary" type="submit">Sign in</button>
-          <div id="loginMessage" class="message"></div>
-        </form>
+        <span class="eyebrow">ADMIN ACCESS</span><h1>Club Hub Control Room</h1><p>Manage matches, squad, live matchday and club media from one mobile-first dashboard.</p>
+        <form id="loginForm"><label>Email<input id="email" type="email" autocomplete="username" required></label><label>Password<input id="password" type="password" autocomplete="current-password" required></label><button class="primary" type="submit">Sign in</button><div id="loginMessage" class="message"></div></form>
       </div>
     </section>
 
     <section id="dashboard" hidden>
-      <div class="dashboard-head">
-        <div><span class="eyebrow">CONTROL ROOM</span><h1>Tebakang Edu Club Hub</h1></div>
-        <div class="user-pill"><span>Signed in</span><strong id="userEmail">—</strong></div>
-      </div>
+      <div class="dashboard-head"><div><span class="eyebrow">CONTROL ROOM</span><h1 id="pageTitle">Home</h1></div><div class="user-pill"><span>Signed in</span><strong id="userEmail">—</strong></div></div>
 
-      <nav class="admin-nav" id="adminNav">
-        <button class="active" data-page="overview">Overview</button>
-        <button data-page="matches">Matches</button>
-        <button data-page="live">Live Control</button>
-        <button data-page="opponents">Opponents</button>
-        <button data-page="players">Players</button>
-        <button data-page="media">Media</button>
-        <button data-page="poster">Poster Studio</button>
-        <button data-page="settings">Settings</button>
-      </nav>
-
-      <section class="admin-page active" data-page-panel="overview">
+      <section class="admin-page active" data-page-panel="home">
+        <article id="matchdayHero" class="panel matchday-hero" hidden>
+          <div><span class="eyebrow live-label">● MATCHDAY ACTIVE</span><h2 id="matchdayHeroTitle">TEDU vs Opponent</h2><p id="matchdayHeroMeta">Live control ready.</p></div>
+          <button id="openActiveMatchBtn" class="primary">MATCHDAY CONTROL</button>
+        </article>
+        <div class="quick-grid">
+          <button id="quickNewMatch" class="quick-card primary-card"><span>＋</span><strong>Tambah Perlawanan</strong><small>Create fixture in seconds</small></button>
+          <button data-go="squad" class="quick-card"><span>👥</span><strong>Squad</strong><small>Players & photos</small></button>
+          <button data-more="gallery" class="quick-card"><span>▦</span><strong>Gallery</strong><small>Albums & photos</small></button>
+          <a href="/" class="quick-card"><span>↗</span><strong>Public Site</strong><small>View live website</small></a>
+        </div>
         <div class="health-grid">
           <article><span>Matches</span><strong id="countMatches">0</strong><small>all seasons</small></article>
-          <article><span>Players</span><strong id="countPlayers">0</strong><small>registered</small></article>
+          <article><span>Active Players</span><strong id="countPlayers">0</strong><small>current squad</small></article>
           <article><span>Opponents</span><strong id="countOpponents">0</strong><small>saved clubs</small></article>
-          <article><span>Media</span><strong id="countMedia">0</strong><small>gallery items</small></article>
+          <article><span>Albums</span><strong id="countAlbums">0</strong><small>gallery</small></article>
         </div>
-        <section class="panel hero-panel">
-          <div>
-            <span class="eyebrow">SYSTEM STATUS</span>
-            <h2>Realtime Club Hub is connected.</h2>
-            <p>Changes saved here are reflected on the public website through Firestore realtime listeners.</p>
-          </div>
-          <div class="quick-actions">
-            <button class="primary" data-go="matches">+ Match</button>
-            <button class="secondary" data-go="live">Live Control</button>
-            <button class="secondary" data-go="opponents">+ Opponent</button>
-            <button class="secondary" data-go="players">+ Player</button>
-          </div>
-        </section>
-        <section class="panel">
-          <div class="panel-head"><div><span class="eyebrow">LATEST</span><h2>Recent matches</h2></div></div>
-          <div id="overviewMatchList" class="admin-list"></div>
-        </section>
+        <section class="panel"><div class="panel-head"><div><span class="eyebrow">LATEST</span><h2>Recent matches</h2></div><button data-go="matches" class="secondary">View all</button></div><div id="overviewMatchList" class="match-card-list"></div></section>
       </section>
 
       <section class="admin-page" data-page-panel="matches">
-        <section class="panel">
-          <div class="panel-head">
-            <div><span class="eyebrow">MATCH EDITOR</span><h2>Create or edit any match</h2></div>
-            <button id="newMatchBtn" class="secondary" type="button">New match</button>
-          </div>
-          <form id="matchForm" class="form-grid">
-            <input id="matchId" type="hidden">
-            <label>Opponent
-              <select id="matchOpponentSelect"><option value="">Choose opponent</option></select>
-            </label>
-            <label>Kick-off<input id="kickoff" type="datetime-local" required></label>
-            <label>Season<input id="season" value="2026"></label>
-            <label>Matchday<input id="matchday" type="number" min="1" placeholder="4"></label>
-            <label>Match type<input id="matchType" value="Friendly Match"></label>
-            <label>Venue<input id="venue" placeholder="Rayang Anfield"></label>
-            <label>Status
-              <select id="status">
-                <option>UPCOMING</option><option>MATCHDAY</option><option>LIVE</option><option>HT</option><option>FT</option>
-              </select>
-            </label>
-            <label>Public
-              <select id="publicVisible"><option value="true">Visible</option><option value="false">Hidden</option></select>
-            </label>
-            <label>TEDU score<input id="homeScore" type="number" min="0" value="0"></label>
-            <label>Opponent score<input id="awayScore" type="number" min="0" value="0"></label>
-            <label>Formation<input id="formation" placeholder="4-2-3-1"></label>
-            <label>Man of the Match<select id="motmPlayer"><option value="">Not selected</option></select></label>
-
-            <div class="wide split-selects">
-              <label>Starting XI
-                <select id="starters" multiple size="9"></select>
-                <small>Choose up to 11 players.</small>
-              </label>
-              <label>Substitutes
-                <select id="substitutes" multiple size="9"></select>
-                <small>Players available from the bench.</small>
-              </label>
-            </div>
-
-            <div class="wide stat-editor">
-              <span class="form-title">Optional match statistics</span>
-              <label>Shots TEDU<input id="statHomeShots" type="number" min="0"></label>
-              <label>Shots Opp<input id="statAwayShots" type="number" min="0"></label>
-              <label>On target TEDU<input id="statHomeOnTarget" type="number" min="0"></label>
-              <label>On target Opp<input id="statAwayOnTarget" type="number" min="0"></label>
-              <label>Corners TEDU<input id="statHomeCorners" type="number" min="0"></label>
-              <label>Corners Opp<input id="statAwayCorners" type="number" min="0"></label>
-              <label>Yellow TEDU<input id="statHomeYellow" type="number" min="0"></label>
-              <label>Yellow Opp<input id="statAwayYellow" type="number" min="0"></label>
-            </div>
-
-            <div class="wide form-actions">
-              <button class="primary" type="submit">Save match</button>
-              <button id="cancelMatchEdit" class="secondary" type="button">Reset</button>
-              <span id="matchMessage" class="message"></span>
-            </div>
-          </form>
-        </section>
-
-        <section class="panel">
-          <div class="panel-head">
-            <div><span class="eyebrow">ARCHIVE</span><h2>Fixtures & results</h2></div>
-            <div class="head-actions">
-              <select id="adminSeasonFilter"><option value="ALL">All seasons</option></select>
-              <button id="seedMatchBtn" class="secondary" type="button">Seed KATMA result</button>
-            </div>
-          </div>
-          <div id="matchAdminList" class="admin-list"></div>
-        </section>
+        <div class="page-actions"><div><span class="eyebrow">MATCHES</span><h2>Fixtures & Results</h2></div><button id="newMatchBtn" class="primary">+ Match</button></div>
+        <div class="filter-bar"><select id="adminSeasonFilter"><option value="ALL">All seasons</option></select><select id="adminStatusFilter"><option value="ALL">All status</option><option>UPCOMING</option><option>MATCHDAY</option><option>LIVE</option><option>HT</option><option>FT</option></select></div>
+        <div id="matchAdminList" class="match-card-list"></div>
       </section>
 
-      <section class="admin-page" data-page-panel="live">
-        <section class="panel live-panel">
-          <div class="panel-head">
-            <div><span class="eyebrow">MATCHDAY ENGINE</span><h2>Live Control</h2></div>
-            <span id="liveStatus" class="status-badge">NO MATCH</span>
-          </div>
-          <label>Select match<select id="liveMatchSelect"><option value="">Choose match</option></select></label>
-          <div id="noSelectedMatch" class="empty">Select a match to begin live control.</div>
-          <div id="liveControls" hidden>
-            <div class="live-title"><strong id="liveOpponent">Opponent</strong><small id="liveMeta">—</small></div>
-            <div class="live-score">
-              <div><span>TEDU</span><strong id="liveHomeScore">0</strong><div><button data-score="home:-1">−</button><button data-score="home:1">+</button></div></div>
-              <i>—</i>
-              <div><span id="liveAwayCode">OPP</span><strong id="liveAwayScore">0</strong><div><button data-score="away:-1">−</button><button data-score="away:1">+</button></div></div>
-            </div>
-            <div class="status-actions">
-              <button data-status="MATCHDAY">Matchday</button><button data-status="LIVE">Live</button><button data-status="HT">Half time</button><button data-status="FT">Full time</button>
-            </div>
-
-            <div class="event-composer">
-              <span class="form-title">Add match event</span>
-              <form id="eventForm">
-                <select id="eventType">
-                  <option value="GOAL">⚽ Goal</option>
-                  <option value="YELLOW">🟨 Yellow card</option>
-                  <option value="RED">🟥 Red card</option>
-                  <option value="SUB">🔄 Substitution</option>
-                  <option value="NOTE">• Note</option>
-                </select>
-                <select id="eventTeam"><option value="home">TEDU</option><option value="away">Opponent</option></select>
-                <select id="eventPlayer"><option value="">Player</option></select>
-                <select id="eventSecondary"><option value="">Assist / Player in</option></select>
-                <input id="eventMinute" type="number" min="1" max="130" placeholder="Min">
-                <input id="eventNote" placeholder="Note (optional)">
-                <button class="goal-btn" type="submit">Add event</button>
-              </form>
-            </div>
-            <div id="liveMessage" class="message"></div>
-            <div id="eventAdminList" class="event-list"></div>
-          </div>
-        </section>
+      <section class="admin-page" data-page-panel="squad">
+        <div class="page-actions"><div><span class="eyebrow">SQUAD</span><h2>Players</h2></div><button id="newPlayerBtn" class="primary">+ Player</button></div>
+        <div class="segmented"><button class="active" data-squad-filter="active">Active</button><button data-squad-filter="inactive">Archived</button><button data-squad-filter="all">All</button></div>
+        <div id="playerAdminList" class="squad-admin-grid"></div>
       </section>
 
-      <section class="admin-page" data-page-panel="opponents">
-        <div class="grid two">
-          <section class="panel">
-            <div class="panel-head"><div><span class="eyebrow">OPPONENT DATABASE</span><h2>Add / edit opponent</h2></div><button id="newOpponentBtn" class="secondary">New</button></div>
-            <form id="opponentForm" class="form-grid">
-              <input id="opponentId" type="hidden">
-              <label>Name<input id="opponentName" placeholder="KATMA" required></label>
-              <label>Code<input id="opponentCode" maxlength="6" placeholder="KAT" required></label>
-              <label>Primary colour<input id="opponentPrimary" type="color" value="#d52b1e"></label>
-              <label>Secondary colour<input id="opponentSecondary" type="color" value="#101010"></label>
-              <label class="wide">Logo image<input id="opponentLogoFile" type="file" accept="image/*"><small>Automatically compressed before upload.</small></label>
-              <div class="wide image-preview"><img id="opponentLogoPreview" alt="Opponent logo preview"><span>Logo preview</span></div>
-              <label class="wide">Notes<input id="opponentNotes" placeholder="Optional notes"></label>
-              <div class="wide form-actions"><button class="primary" type="submit">Save opponent</button><span id="opponentMessage" class="message"></span></div>
-            </form>
-          </section>
-          <section class="panel">
-            <div class="panel-head"><div><span class="eyebrow">SAVED CLUBS</span><h2>Opponents</h2></div></div>
-            <div id="opponentAdminList" class="opponent-grid"></div>
-          </section>
+      <section class="admin-page" data-page-panel="more">
+        <div class="page-actions"><div><span class="eyebrow">MORE</span><h2>Club Tools</h2></div></div>
+        <div class="tool-grid">
+          <button data-tool="opponents"><span>🛡</span><strong>Opponents</strong><small>Logos & club records</small></button>
+          <button data-tool="gallery"><span>▦</span><strong>Gallery</strong><small>Albums & photos</small></button>
+          <button data-tool="settings"><span>⚙</span><strong>Settings</strong><small>Public visibility</small></button>
+          <button data-tool="backup"><span>⇩</span><strong>Backup</strong><small>Download club data</small></button>
         </div>
-      </section>
 
-      <section class="admin-page" data-page-panel="players">
-        <div class="grid two">
-          <section class="panel">
-            <div class="panel-head"><div><span class="eyebrow">SQUAD MANAGER</span><h2>Add / edit player</h2></div><button id="newPlayerBtn" class="secondary">New</button></div>
-            <form id="playerForm" class="form-grid">
-              <input id="playerId" type="hidden">
-              <label>No.<input id="playerNumber" placeholder="09" maxlength="3"></label>
-              <label>Position<input id="playerPosition" placeholder="AMF" required></label>
-              <label class="wide">Player name<input id="playerName" placeholder="Aznel" required></label>
-              <label>Active<select id="playerActive"><option value="true">Active</option><option value="false">Inactive</option></select></label>
-              <label>Photo / figure<input id="playerPhotoFile" type="file" accept="image/*"><small>Face or full-body photo accepted.</small></label>
-              <div class="wide image-preview player-preview"><img id="playerPhotoPreview" alt="Player photo preview"><span>Player preview</span></div>
-              <div class="wide form-actions"><button class="primary" type="submit">Save player</button><button id="seedSquadBtn" class="secondary" type="button">Seed current squad</button><span id="playerMessage" class="message"></span></div>
-            </form>
-          </section>
-          <section class="panel">
-            <div class="panel-head"><div><span class="eyebrow">REGISTERED</span><h2>Squad</h2></div></div>
-            <div id="playerAdminList" class="player-admin-list"></div>
-          </section>
-        </div>
-      </section>
-
-      <section class="admin-page" data-page-panel="media">
-        <div class="grid two">
-          <section class="panel">
-            <div class="panel-head"><div><span class="eyebrow">CLUB MEDIA</span><h2>Add gallery item</h2></div></div>
-            <form id="mediaForm" class="form-grid">
-              <label class="wide">Title<input id="mediaTitle" placeholder="Matchday vs KATMA" required></label>
-              <label class="wide">Photo<input id="mediaFile" type="file" accept="image/*" required></label>
-              <label>Linked match<select id="mediaMatch"><option value="">None</option></select></label>
-              <label>Public<select id="mediaVisible"><option value="true">Visible</option><option value="false">Hidden</option></select></label>
-              <label class="wide">Caption<input id="mediaCaption" placeholder="Optional caption"></label>
-              <div class="wide image-preview media-preview"><img id="mediaPreview" alt="Media preview"><span>Gallery preview</span></div>
-              <div class="wide form-actions"><button class="primary" type="submit">Add to gallery</button><span id="mediaMessage" class="message"></span></div>
-            </form>
-          </section>
-          <section class="panel">
-            <div class="panel-head"><div><span class="eyebrow">GALLERY</span><h2>Media library</h2></div></div>
-            <div id="mediaAdminList" class="media-admin-grid"></div>
-          </section>
-        </div>
-      </section>
-
-
-      <section class="admin-page" data-page-panel="poster">
-        <section class="panel">
-          <div class="panel-head"><div><span class="eyebrow">SOCIAL CREATIVE</span><h2>Automatic Poster Studio</h2></div><span class="status-badge">1080 × 1350</span></div>
-          <div class="poster-controls">
-            <label>Match<select id="posterMatch"><option value="">Choose match</option></select></label>
-            <label>Poster type<select id="posterType"><option value="MATCHDAY">Matchday</option><option value="FULLTIME">Full Time</option><option value="LINEUP">Lineup</option><option value="MOTM">Man of the Match</option></select></label>
-            <button id="generatePosterBtn" class="primary" type="button">Generate poster</button>
-            <button id="downloadPosterBtn" class="secondary" type="button">Download PNG</button>
-          </div>
-          <p class="muted-copy">Uses the saved club crest, opponent logo, match data, lineup and MOTM automatically. No external image service required.</p>
-          <div class="poster-stage"><canvas id="posterCanvas" width="1080" height="1350"></canvas></div>
-          <div id="posterMessage" class="message"></div>
+        <section id="tool-opponents" class="tool-panel panel">
+          <div class="panel-head"><div><span class="eyebrow">OPPONENT DATABASE</span><h2>Opponents</h2></div><button id="newOpponentBtn" class="secondary">+ Opponent</button></div>
+          <div id="opponentAdminList" class="opponent-grid"></div>
         </section>
-      </section>
 
-      <section class="admin-page" data-page-panel="settings">
-        <section class="panel">
-          <div class="panel-head"><div><span class="eyebrow">PUBLIC EXPERIENCE</span><h2>Visibility & season</h2></div></div>
+        <section id="tool-gallery" class="tool-panel panel" hidden>
+          <div class="panel-head"><div><span class="eyebrow">CLUB MEDIA</span><h2>Gallery Albums</h2></div><button id="newAlbumBtn" class="secondary">+ Album</button></div>
+          <p class="muted-copy">Create albums, link them to matches and upload several compressed WebP photos at once.</p>
+          <div id="albumAdminList" class="album-admin-grid"></div>
+        </section>
+
+        <section id="tool-settings" class="tool-panel panel" hidden>
+          <div class="panel-head"><div><span class="eyebrow">PUBLIC EXPERIENCE</span><h2>Visibility & Season</h2></div></div>
           <form id="settingsForm" class="settings-grid">
             <label>Current season<input id="settingCurrentSeason" value="2026"></label>
             <label class="toggle"><input id="settingShowSquad" type="checkbox" checked><span>Show squad</span></label>
             <label class="toggle"><input id="settingShowStats" type="checkbox" checked><span>Show club stats</span></label>
             <label class="toggle"><input id="settingShowH2H" type="checkbox" checked><span>Show H2H</span></label>
-            <label class="toggle"><input id="settingShowMedia" type="checkbox" checked><span>Show media</span></label>
+            <label class="toggle"><input id="settingShowMedia" type="checkbox" checked><span>Show gallery</span></label>
             <label class="toggle"><input id="settingShowArchive" type="checkbox" checked><span>Show match archive</span></label>
-            <button class="primary" type="submit">Save settings</button>
-            <span id="settingsMessage" class="message"></span>
+            <button class="primary" type="submit">Save settings</button><span id="settingsMessage" class="message"></span>
           </form>
         </section>
-        <section class="panel">
-          <div class="panel-head"><div><span class="eyebrow">BACKUP</span><h2>Club data backup</h2></div></div>
-          <p class="muted-copy">Download a JSON backup of matches, events, opponents, players, media and public settings.</p>
-          <button id="exportBackupBtn" class="secondary" type="button">Download backup JSON</button>
-        </section>
-        <section class="panel notice">
-          <span class="eyebrow">ZERO-COST ARCHITECTURE</span>
-          <h2>No Firebase Storage required</h2>
-          <p>Logos and player/media photos are compressed in the browser and stored as small WebP data inside Firestore documents. This avoids enabling Firebase Storage or billing. Keep images purposeful and limited.</p>
+
+        <section id="tool-backup" class="tool-panel panel" hidden>
+          <div class="panel-head"><div><span class="eyebrow">BACKUP</span><h2>Club Data</h2></div></div>
+          <p class="muted-copy">Download matches, events, players, opponents, albums, photos and settings as JSON.</p>
+          <button id="exportBackupBtn" class="secondary">Download backup JSON</button>
+          <button id="logoutBtn" class="danger-btn">Log out</button>
         </section>
       </section>
+
+      <nav class="bottom-nav" id="adminNav">
+        <button class="active" data-page="home"><span>⌂</span>Home</button>
+        <button data-page="matches"><span>⚽</span>Matches</button>
+        <button data-page="squad"><span>👥</span>Squad</button>
+        <button data-page="more"><span>•••</span>More</button>
+      </nav>
     </section>
   </main>
+
+  <dialog id="matchCreateDialog" class="sheet-dialog">
+    <form id="createMatchForm" class="sheet">
+      <div class="sheet-head"><div><span class="eyebrow">NEW MATCH</span><h2>Create Fixture</h2></div><button type="button" class="icon-close" data-close="matchCreateDialog">✕</button></div>
+      <div class="form-grid">
+        <label class="wide">Opponent<select id="createOpponent" required><option value="">Choose opponent</option></select></label>
+        <label>Date & time<input id="createKickoff" type="datetime-local" required></label>
+        <label>Matchday<input id="createMatchday" type="number" min="1" placeholder="4"></label>
+        <label class="wide">Venue<input id="createVenue" placeholder="Rayang Anfield"></label>
+        <label>Match type<input id="createType" value="Friendly Match"></label>
+        <label>Season<input id="createSeason" value="2026"></label>
+      </div>
+      <div class="sticky-actions"><button class="primary grow" type="submit">Save Match</button><button type="button" class="secondary" data-close="matchCreateDialog">Cancel</button></div>
+      <div id="createMatchMessage" class="message"></div>
+    </form>
+  </dialog>
+
+  <dialog id="matchManager" class="full-dialog">
+    <div class="manager-shell">
+      <header class="manager-head"><button id="closeMatchManager" class="back-btn">←</button><div><span id="managerStatus" class="status-badge">UPCOMING</span><h2 id="managerTitle">TEDU vs Opponent</h2><small id="managerMeta">—</small></div><button id="managerVisibility" class="visibility-btn">PUBLIC</button></header>
+      <nav class="manager-tabs"><button class="active" data-match-tab="info">Info</button><button data-match-tab="lineup">Lineup</button><button data-match-tab="live">Live</button><button data-match-tab="poster">Poster</button></nav>
+
+      <section class="manager-panel active" data-match-panel="info">
+        <form id="matchInfoForm" class="form-grid">
+          <label class="wide">Opponent<select id="editOpponent"></select></label>
+          <label>Kick-off<input id="editKickoff" type="datetime-local" required></label><label>Matchday<input id="editMatchday" type="number" min="1"></label>
+          <label class="wide">Venue<input id="editVenue"></label><label>Match type<input id="editType"></label><label>Season<input id="editSeason"></label>
+          <label>Status<select id="editStatus"><option>UPCOMING</option><option>MATCHDAY</option><option>LIVE</option><option>HT</option><option>FT</option></select></label>
+          <label>Man of the Match<select id="editMotm"><option value="">Not selected</option></select></label>
+          <div class="wide result-editor"><span>RESULT</span><label>TEDU<input id="editHomeScore" type="number" min="0"></label><b>—</b><label>OPP<input id="editAwayScore" type="number" min="0"></label></div>
+          <div class="wide sticky-actions"><button id="saveMatchInfoBtn" class="primary grow" type="submit">Save Changes</button><button id="deleteManagedMatch" type="button" class="danger-btn">Delete Match</button></div>
+          <div id="matchInfoMessage" class="wide message"></div>
+        </form>
+      </section>
+
+      <section class="manager-panel" data-match-panel="lineup">
+        <div class="lineup-head"><div><span class="eyebrow">TEAM SELECTION</span><h3>Starting XI & Bench</h3></div><label>Formation<select id="editFormation"><option>4-2-3-1</option><option>4-3-3</option><option>4-4-2</option><option>3-5-2</option><option>Custom</option></select></label></div>
+        <div class="selection-counts"><span id="xiCount">Starting XI 0/11</span><span id="benchCount">Bench 0</span></div>
+        <p class="muted-copy">Tap a player to cycle: Not Selected → Starting XI → Bench.</p>
+        <div id="lineupPlayerGrid" class="lineup-player-grid"></div>
+        <div class="sticky-actions"><button id="saveLineupBtn" class="primary grow">Save Lineup</button></div>
+      </section>
+
+      <section class="manager-panel" data-match-panel="live">
+        <div class="live-score-card"><span id="liveHomeCode">TEDU</span><div><button data-score="home:-1">−</button><strong id="liveHomeScore">0</strong><button data-score="home:1">+</button></div><i>—</i><div><button data-score="away:-1">−</button><strong id="liveAwayScore">0</strong><button data-score="away:1">+</button></div><span id="liveAwayCode">OPP</span></div>
+        <div class="status-actions"><button data-status="MATCHDAY">Matchday</button><button data-status="LIVE">Go Live</button><button data-status="HT">Half Time</button><button data-status="LIVE">2nd Half</button><button data-status="FT">Full Time</button></div>
+        <section class="event-composer"><span class="eyebrow">ADD EVENT</span><form id="eventForm"><select id="eventType"><option value="GOAL">⚽ Goal</option><option value="YELLOW">🟨 Yellow</option><option value="RED">🟥 Red</option><option value="SUB">🔄 Substitution</option><option value="NOTE">• Note</option></select><select id="eventTeam"><option value="home">TEDU</option><option value="away">Opponent</option></select><select id="eventPlayer"><option value="">Player</option></select><select id="eventSecondary"><option value="">Assist / Player in</option></select><input id="eventMinute" type="number" min="1" max="130" placeholder="Min"><input id="eventNote" placeholder="Note (optional)"><button class="primary" type="submit">Add Event</button></form></section>
+        <div id="liveMessage" class="message"></div><div id="eventAdminList" class="event-list"></div>
+      </section>
+
+      <section class="manager-panel" data-match-panel="poster">
+        <div class="poster-controls"><select id="posterType"><option value="MATCHDAY">Matchday</option><option value="FULLTIME">Full Time</option><option value="LINEUP">Starting XI</option><option value="MOTM">MOTM</option></select><button id="generatePosterBtn" class="primary">Generate</button><button id="downloadPosterBtn" class="secondary">Download PNG</button></div>
+        <div class="poster-stage"><canvas id="posterCanvas" width="1080" height="1350"></canvas></div><div id="posterMessage" class="message"></div>
+      </section>
+    </div>
+  </dialog>
+
+  <dialog id="playerDialog" class="sheet-dialog">
+    <form id="playerForm" class="sheet">
+      <div class="sheet-head"><div><span class="eyebrow">PLAYER</span><h2 id="playerDialogTitle">Add Player</h2></div><button type="button" class="icon-close" data-close="playerDialog">✕</button></div>
+      <input id="playerId" type="hidden">
+      <div class="player-photo-editor"><div id="playerPhotoFrame" class="player-photo-frame"><span id="playerPhotoPlaceholder">PLAYER</span><img id="playerPhotoPreview" alt="Player preview"></div><label class="photo-button">Change Photo<input id="playerPhotoFile" type="file" accept="image/*" hidden></label><button id="removePlayerPhoto" type="button" class="text-btn">Remove photo</button></div>
+      <div class="form-grid"><label>No.<input id="playerNumber" maxlength="3" placeholder="07"></label><label>Position<input id="playerPosition" placeholder="RW" required></label><label class="wide">Player name<input id="playerName" placeholder="Hasif" required></label><label class="wide">Status<select id="playerActive"><option value="true">Active squad</option><option value="false">Archived / Inactive</option></select></label></div>
+      <div class="sticky-actions"><button class="primary grow" type="submit">Save Player</button><button type="button" class="secondary" data-close="playerDialog">Cancel</button></div><div id="playerMessage" class="message"></div>
+    </form>
+  </dialog>
+
+  <dialog id="opponentDialog" class="sheet-dialog">
+    <form id="opponentForm" class="sheet">
+      <div class="sheet-head"><div><span class="eyebrow">OPPONENT</span><h2 id="opponentDialogTitle">Add Opponent</h2></div><button type="button" class="icon-close" data-close="opponentDialog">✕</button></div>
+      <input id="opponentId" type="hidden">
+      <div class="image-preview"><img id="opponentLogoPreview" alt="Opponent logo preview"><span>LOGO</span></div>
+      <label class="photo-button">Upload Logo<input id="opponentLogoFile" type="file" accept="image/*" hidden></label>
+      <div class="form-grid"><label class="wide">Name<input id="opponentName" required></label><label>Code<input id="opponentCode" maxlength="6" required></label><label>Primary colour<input id="opponentPrimary" type="color" value="#d52b1e"></label><label>Secondary colour<input id="opponentSecondary" type="color" value="#101010"></label></div>
+      <div class="sticky-actions"><button class="primary grow" type="submit">Save Opponent</button><button type="button" class="secondary" data-close="opponentDialog">Cancel</button></div><div id="opponentMessage" class="message"></div>
+    </form>
+  </dialog>
+
+  <dialog id="albumDialog" class="full-dialog">
+    <div class="manager-shell">
+      <header class="manager-head"><button id="closeAlbumDialog" class="back-btn">←</button><div><span class="eyebrow">GALLERY ALBUM</span><h2 id="albumDialogTitle">New Album</h2><small id="albumPhotoCount">0 photos</small></div><button id="albumVisibilityBtn" class="visibility-btn">PUBLIC</button></header>
+      <form id="albumForm" class="form-grid album-form"><input id="albumId" type="hidden"><label class="wide">Album title<input id="albumTitle" required placeholder="Matchday vs KATMA"></label><label>Date<input id="albumDate" type="date"></label><label>Category<select id="albumCategory"><option>Matchday</option><option>Training</option><option>Team</option><option>Event</option><option>Behind The Scenes</option></select></label><label class="wide">Linked match<select id="albumMatch"><option value="">None</option></select></label><div class="wide sticky-actions"><button class="primary grow" type="submit">Save Album</button><button id="deleteAlbumBtn" type="button" class="danger-btn">Delete Album</button></div></form>
+      <section class="album-uploader"><label class="photo-button multi">+ Upload Photos<input id="albumPhotoFiles" type="file" accept="image/*" multiple hidden></label><small>Photos are compressed to WebP automatically before saving.</small><div id="albumUploadProgress" class="message"></div></section>
+      <div id="albumPhotoAdminList" class="photo-admin-grid"></div>
+    </div>
+  </dialog>
+
   <script type="module" src="./admin.js"></script>
 </body>
 </html>
