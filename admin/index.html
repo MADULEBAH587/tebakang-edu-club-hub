@@ -140,7 +140,7 @@
           <label class="wide">Venue<input id="editVenue"></label><label>Match type<input id="editType"></label><label>Season<input id="editSeason"></label>
           <label>Status<select id="editStatus"><option>UPCOMING</option><option>MATCHDAY</option><option>LIVE</option><option>HT</option><option>FT</option></select></label>
           <label>Man of the Match<select id="editMotm"><option value="">Not selected</option></select></label>
-          <div class="wide result-editor"><span>RESULT</span><label>TEDU<input id="editHomeScore" type="number" min="0"></label><b>—</b><label>OPP<input id="editAwayScore" type="number" min="0"></label></div>
+          <div class="wide result-editor"><span>RESULT</span><label>TEDU<input id="editHomeScore" type="number" min="0"></label><b>—</b><label>OPP<input id="editAwayScore" type="number" min="0"></label><button id="unlockResultBtn" type="button" class="secondary result-unlock" hidden>Edit Result</button></div>
           <div class="wide sticky-actions"><button id="saveMatchInfoBtn" class="primary grow" type="submit">Save Changes</button><button id="deleteManagedMatch" type="button" class="danger-btn">Delete Match</button></div>
           <div id="matchInfoMessage" class="wide message"></div>
         </form>
