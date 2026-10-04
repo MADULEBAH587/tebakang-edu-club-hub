@@ -36,10 +36,11 @@ Premium, animated, mobile-first digital clubhouse for Tebakang Educator FC.
 - Full Time confirmation flow
 - Opponent manager with compressed logo uploads and duplicate protection
 - Squad manager with compressed WebP player photo uploads
+- Player Photo Engine: optional automatic in-browser background removal, Cutout/Original choice and photo focus control
 - Player Archive/Inactive workflow instead of destructive player deletion
 - Gallery Albums: create, link to match, multi-upload, cover, reorder, hide/show, delete
 - Public settings and JSON backup
-- Automatic Matchday / Full Time / Starting XI / MOTM Poster Studio
+- Poster Studio v2: Matchday / Starting XI / Full Time / MOTM with Signature / Stadium / Elite design systems, featured-player cutouts and one-tap PNG export
 - Human-friendly error messages instead of raw Firestore paths
 - Save/loading states to prevent accidental double submission
 - Production seed/test controls removed
@@ -63,3 +64,7 @@ Public reads are allowed for the public club site. Firestore writes require the 
 
 ## Production
 https://tebakang-edu-club-hub.vercel.app
+
+
+## Player Photo Engine dependency
+Automatic background removal uses `@imgly/background-removal` in the browser. The AI model is fetched on first use and cached by the browser; processing stays on the user's device. The package is licensed under AGPL, so preserve the applicable license/source obligations when redistributing or changing the deployment model.
