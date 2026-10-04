@@ -162,15 +162,21 @@ $("#generatePosterBtn").onclick=generatePoster;
 $("#downloadPosterBtn").onclick=()=>{const canvas=$("#posterCanvas");canvas.toBlob(blob=>{if(!blob)return;const u=URL.createObjectURL(blob),a=document.createElement("a"),m=matches.find(x=>x.id===selectedMatchId),style=($("#posterStyle").value||"SIGNATURE").toLowerCase(),type=($("#posterType").value||"poster").toLowerCase();a.href=u;a.download="tebakang-edu-"+type+"-"+style+"-"+slug(m?.opponent||"match")+".png";a.click();URL.revokeObjectURL(u);},"image/png");};
 
 async function generatePoster(){
-  const m=matches.find(x=>x.id===selectedMatchId);if(!m)return;
-  const type=$("#posterType").value||"MATCHDAY",style=$("#posterStyle").value||"SIGNATURE",canvas=$("#posterCanvas"),x=canvas.getContext("2d"),W=canvas.width,H=canvas.height;
-  await document.fonts.ready;x.clearRect(0,0,W,H);drawPosterBackground(x,style,W,H,type);
-  const club=await li("/assets/tebakang-edu-logo.webp"),opp=await li(m.opponentLogo||"/assets/katma-placeholder.svg"),hero=pickPosterPlayer(m,type);
-  if(type==="MATCHDAY")await drawMatchdayPoster(x,m,style,club,opp,hero,W,H);
-  else if(type==="FULLTIME")await drawFulltimePoster(x,m,style,club,opp,hero,W,H);
-  else if(type==="LINEUP")await drawLineupPoster(x,m,style,club,opp,hero,W,H);
-  else await drawMotmPoster(x,m,style,club,hero,W,H);
-  posterFooter(x,style,W,H);msg("#posterMessage",style+" "+type+" poster ready ✓","ok");
+  const m=matches.find(x=>x.id===selectedMatchId);if(!m){msg("#posterMessage","Choose or manage a match first.","error");return;}
+  const btn=$("#generatePosterBtn"),type=$("#posterType").value||"MATCHDAY",style=$("#posterStyle").value||"SIGNATURE",canvas=$("#posterCanvas"),x=canvas?.getContext("2d");
+  if(!canvas||!x){msg("#posterMessage","Poster canvas is unavailable. Reload the page.","error");return;}
+  const W=canvas.width,H=canvas.height;busy(btn,true,"Generating…");msg("#posterMessage","Generating "+style+" "+type+"…");
+  try{
+    await document.fonts.ready;x.clearRect(0,0,W,H);drawPosterBackground(x,style,W,H,type);
+    const club=await safeLi("/assets/tebakang-edu-logo.webp"),opp=await safeLi(m.opponentLogo||"/assets/katma-placeholder.svg"),hero=pickPosterPlayer(m,type);
+    if(type==="MATCHDAY")await drawMatchdayPoster(x,m,style,club,opp,hero,W,H);
+    else if(type==="FULLTIME")await drawFulltimePoster(x,m,style,club,opp,hero,W,H);
+    else if(type==="LINEUP")await drawLineupPoster(x,m,style,club,opp,hero,W,H);
+    else await drawMotmPoster(x,m,style,club,hero,W,H);
+    posterFooter(x,style,W,H);msg("#posterMessage",style+" "+type+" poster ready ✓","ok");
+  }catch(err){
+    console.error("Poster generation failed",err);msg("#posterMessage","Poster gagal dijana. Cuba semula atau tukar Featured Player.","error");toast("Poster generation failed.","error");
+  }finally{busy(btn,false,"Generate Poster");}
 }
 function pickPosterPlayer(m,type){
   const chosen=$("#posterHeroPlayer").value;if(chosen)return players.find(p=>p.id===chosen);
@@ -251,8 +257,8 @@ function posterDateParts(m){const d=m.kickoff?.toDate?m.kickoff.toDate():null;if
 function ct(ctx,text,x,y,font,align,color){ctx.save();ctx.textAlign=align;ctx.fillStyle=color;ctx.font=font;ctx.fillText(String(text??""),x,y);ctx.restore();}
 function fitCt(ctx,text,x,y,maxWidth,startSize,family="Oswald",align="left",color="#fff"){text=String(text??"");let size=startSize;ctx.save();ctx.textAlign=align;ctx.fillStyle=color;while(size>14){ctx.font="700 "+size+"px "+family;if(ctx.measureText(text).width<=maxWidth)break;size-=2;}ctx.fillText(text,x,y);ctx.restore();}
 function wrapCt(ctx,text,x,y,maxWidth,size,color){const words=String(text||"").split(/\s+/),lines=[];let line="";ctx.save();ctx.font="700 "+size+"px Inter";ctx.fillStyle=color;ctx.textAlign="center";for(const w of words){const t=line?line+" "+w:w;if(ctx.measureText(t).width>maxWidth&&line){lines.push(line);line=w;}else line=t;}if(line)lines.push(line);lines.slice(0,2).forEach((ln,i)=>ctx.fillText(ln,x,y+i*(size+8)));ctx.restore();}
-function roundRect(ctx,x,y,w,h,r){ctx.beginPath();ctx.roundRect(x,y,w,h,r);ctx.fill();}
-function li(src){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=()=>rej(new Error("Could not load poster image."));i.src=src;});}
+function roundRect(ctx,x,y,w,h,r){ctx.beginPath();if(typeof ctx.roundRect==="function")ctx.roundRect(x,y,w,h,r);else{const rr=Math.min(r,w/2,h/2);ctx.moveTo(x+rr,y);ctx.lineTo(x+w-rr,y);ctx.quadraticCurveTo(x+w,y,x+w,y+rr);ctx.lineTo(x+w,y+h-rr);ctx.quadraticCurveTo(x+w,y+h,x+w-rr,y+h);ctx.lineTo(x+rr,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-rr);ctx.lineTo(x,y+rr);ctx.quadraticCurveTo(x,y,x+rr,y);}ctx.fill();}
+function li(src){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=()=>rej(new Error("Could not load poster image."));i.src=src;});}\nasync function safeLi(src){try{return await li(src);}catch(e){if(src!=="/assets/katma-placeholder.svg")try{return await li("/assets/katma-placeholder.svg");}catch{}throw e;}}
 function contain(ctx,img,x,y,w,h){const r=Math.min(w/img.width,h/img.height),nw=img.width*r,nh=img.height*r;ctx.drawImage(img,x+(w-nw)/2,y+(h-nh)/2,nw,nh);}
 function containBottom(ctx,img,x,y,w,h){const r=Math.min(w/img.width,h/img.height),nw=img.width*r,nh=img.height*r;ctx.drawImage(img,x+(w-nw)/2,y+h-nh,nw,nh);}
 function cover(ctx,img,x,y,w,h){const r=Math.max(w/img.width,h/img.height),nw=img.width*r,nh=img.height*r;ctx.save();ctx.beginPath();ctx.rect(x,y,w,h);ctx.clip();ctx.drawImage(img,x+(w-nw)/2,y+(h-nh)/2,nw,nh);ctx.restore();}
