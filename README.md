@@ -1,45 +1,62 @@
-# Tebakang Edu Club Hub — v1.0
+# Tebakang Edu Club Hub — v2
 
 Premium, animated, mobile-first digital clubhouse for Tebakang Educator FC.
 
 ## Stack
-- Vercel Hobby — hosting + continuous deployment
+- Vercel Hobby — production hosting + GitHub continuous deployment
 - GitHub — source control
 - Firebase Spark — Firestore + Email/Password Authentication
 - No Firebase Storage / no billing dependency
 
 ## Public Club Hub
-- Dynamic Match Centre: upcoming / matchday / live / half-time / full-time
-- Realtime scores and match events
-- Match timeline
-- Starting XI + substitutes
-- Match statistics
-- Match archive + season filter + historical match viewer
-- Recent form
-- H2H records generated automatically
-- Squad cards with player photos
-- Player profiles + season/career stats
-- Club season stats + player spotlight
-- Media gallery
-- Live GOAL overlay
-- Match sharing
+- One production URL with an Admin entry button in the main header
+- Realtime Match Centre for upcoming / matchday / live / half-time / full-time
+- Safe empty state when no match exists (no hard-coded result fallback)
+- Match timeline and Starting XI + bench
+- Mobile-first match archive and season filter
+- Recent form and automatic H2H records
+- Active squad cards with player photos and player profiles
+- Historical lineups still resolve archived/inactive players
+- Automatic season club stats: matches, W/D/L, goals for/against
+- Album-based Gallery with linked-match photo access
+- Full-screen photo viewer with swipe navigation
+- Live GOAL overlay and match sharing
 - Public visibility settings
 
-## Admin Control Room
-- Opponent Manager with compressed logo uploads
-- Player Manager with compressed face/full-body photos
-- Create, edit, hide, restore and delete past/future matches
-- Formation, XI, substitutes and Man of the Match
-- Live score controls
-- Goal / card / substitution / note timeline events
-- Optional match statistics
-- Media manager
-- Season and visibility settings
-- JSON backup
-- Automatic Matchday / Full Time / Lineup / MOTM Poster Studio
+## Admin Control Room v2
+- Mobile bottom navigation: Home / Matches / Squad / More
+- Dashboard with active Matchday Control, Next Match and Latest Result
+- Compact match creation workflow
+- Per-match manager: Info / Lineup / Live / Poster
+- Safe edit-state handling when a match is deleted
+- Match hide/show and destructive delete confirmation
+- Starting XI / Bench tap selector with pitch preview and 11-player cap
+- Formation presets
+- Realtime live score and event controls
+- Full Time confirmation flow
+- Opponent manager with compressed logo uploads and duplicate protection
+- Squad manager with compressed WebP player photo uploads
+- Player Archive/Inactive workflow instead of destructive player deletion
+- Gallery Albums: create, link to match, multi-upload, cover, reorder, hide/show, delete
+- Public settings and JSON backup
+- Automatic Matchday / Full Time / Starting XI / MOTM Poster Studio
+- Human-friendly error messages instead of raw Firestore paths
+- Save/loading states to prevent accidental double submission
+- Production seed/test controls removed
+
+## Data model
+- `matches`
+- `events`
+- `players`
+- `opponents`
+- `albums`
+- `media`
+- `settings/public`
 
 ## Zero-cost image strategy
-Images are compressed client-side to WebP before being written as small Firestore document fields. This avoids enabling Firebase Storage. Keep the gallery curated because Firestore documents have size limits and image payloads consume database bandwidth.
+Player photos, opponent logos and gallery photos are compressed client-side to WebP before being written to Firestore. Gallery photos are stored as separate media documents rather than packing an entire album into one Firestore document.
+
+Keep the gallery curated because Firestore documents have size limits and image payloads consume database bandwidth. If the media library grows substantially, move image binaries to a dedicated storage/CDN while keeping metadata in Firestore.
 
 ## Security
 Public reads are allowed for the public club site. Firestore writes require the authenticated administrator UID defined in `firestore.rules`.
