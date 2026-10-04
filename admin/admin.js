@@ -5,7 +5,7 @@ import { firebaseConfig } from "../firebase-config.js";
 
 const app=initializeApp(firebaseConfig),db=getFirestore(app),auth=getAuth(app),$=s=>document.querySelector(s),$$=s=>Array.from(document.querySelectorAll(s));
 let matches=[],players=[],opponents=[],events=[],media=[],albums=[],settings={},selectedMatchId="",currentAlbumId="",squadFilter="active";
-let pendingPlayerPhoto="",editingPlayerPhoto="",pendingOpponentLogo="",editingOpponentLogo="",lineupXI=[],lineupBench=[];
+let pendingPlayerPhoto="",editingPlayerPhoto="",pendingPlayerOriginalPhoto="",pendingPlayerCutoutPhoto="",playerPhotoChoice="original",bgRemovalModulePromise=null,pendingOpponentLogo="",editingOpponentLogo="",lineupXI=[],lineupBench=[];
 
 $("#loginForm").addEventListener("submit",async e=>{e.preventDefault();const b=e.submitter;busy(b,true,"Signing in…");msg("#loginMessage","");try{await signInWithEmailAndPassword(auth,$("#email").value.trim(),$("#password").value);}catch(x){msg("#loginMessage",friendly(x),"error");}finally{busy(b,false,"Sign in");}});
 $("#logoutBtn").addEventListener("click",()=>signOut(auth));
@@ -74,11 +74,56 @@ function icon(t){return({GOAL:"⚽",YELLOW:"🟨",RED:"🟥",SUB:"🔄",NOTE:"�
 $$("[data-squad-filter]").forEach(b=>b.onclick=()=>{$$("[data-squad-filter]").forEach(x=>x.classList.remove("active"));b.classList.add("active");squadFilter=b.dataset.squadFilter;renderPlayers();});
 function renderPlayers(){const el=$("#playerAdminList"),list=players.filter(p=>squadFilter==="all"||(squadFilter==="active"?p.active!==false:p.active===false));el.innerHTML=list.length?list.map(p=>'<button class="player-admin-card" data-edit-player="'+p.id+'"><div class="player-admin-photo">'+(p.photoData?'<img src="'+p.photoData+'" alt="'+esc(p.name)+'">':'<span>'+esc(initials(p.name))+'</span>')+'</div><div class="player-admin-copy"><b>#'+esc(p.number||"—")+' '+esc(p.name||"Player")+'</b><small>'+esc(p.position||"—")+'</small><em class="'+(p.active===false?"inactive":"")+'">'+(p.active===false?"ARCHIVED":"ACTIVE")+'</em></div></button>').join(""):'<div class="empty">No players in this list.</div>';el.querySelectorAll("[data-edit-player]").forEach(b=>b.onclick=()=>openPlayerEditor(b.dataset.editPlayer));}
 $("#newPlayerBtn").onclick=()=>openPlayerEditor("");
-function openPlayerEditor(id){const p=players.find(x=>x.id===id);$("#playerForm").reset();$("#playerId").value=p?.id||"";$("#playerDialogTitle").textContent=p?"Edit Player":"Add Player";$("#playerName").value=p?.name||"";$("#playerPosition").value=p?.position||"";$("#playerNumber").value=p?.number||"";$("#playerActive").value=String(p?.active!==false);$("#playerPhotoPosition").value=String(p?.photoPositionY??20);editingPlayerPhoto=p?.photoData||"";pendingPlayerPhoto="";preview("#playerPhotoPreview",editingPlayerPhoto);$("#playerPhotoPreview").style.objectPosition="center "+$("#playerPhotoPosition").value+"%";$("#playerPhotoPlaceholder").style.display=editingPlayerPhoto?"none":"block";msg("#playerMessage","");$("#playerDialog").showModal();}
+function openPlayerEditor(id){
+  const p=players.find(x=>x.id===id);
+  $("#playerForm").reset();$("#playerId").value=p?.id||"";$("#playerDialogTitle").textContent=p?"Edit Player":"Add Player";
+  $("#playerName").value=p?.name||"";$("#playerPosition").value=p?.position||"";$("#playerNumber").value=p?.number||"";$("#playerActive").value=String(p?.active!==false);
+  $("#playerPhotoPosition").value=String(p?.photoPositionY??20);editingPlayerPhoto=p?.photoData||"";pendingPlayerPhoto="";pendingPlayerOriginalPhoto="";pendingPlayerCutoutPhoto="";playerPhotoChoice=p?.photoMode||"original";
+  preview("#playerPhotoPreview",editingPlayerPhoto);$("#playerPhotoPreview").style.objectPosition="center "+$("#playerPhotoPosition").value+"%";$("#playerPhotoPlaceholder").style.display=editingPlayerPhoto?"none":"block";
+  $("#cutoutChoice").hidden=true;$("#cutoutBadge").textContent=playerPhotoChoice==="cutout"?"CUTOUT READY":"AUTO CUTOUT";msg("#cutoutStatus",editingPlayerPhoto?(playerPhotoChoice==="cutout"?"Transparent player cutout saved.":"Current player photo loaded."):"Upload a player photo. Background removal runs on this device.");
+  msg("#playerMessage","");$("#playerDialog").showModal();
+}
 $("#playerPhotoPosition").oninput=()=>{$("#playerPhotoPreview").style.objectPosition="center "+$("#playerPhotoPosition").value+"%";};
-$("#playerPhotoFile").onchange=async e=>{const f=e.target.files?.[0];if(!f)return;try{toast("Compressing player photo…");pendingPlayerPhoto=await compress(f,720,.78,300000);preview("#playerPhotoPreview",pendingPlayerPhoto);$("#playerPhotoPlaceholder").style.display="none";toast("Player photo ready ✓","ok");}catch(x){toast(friendly(x),"error");}};
-$("#removePlayerPhoto").onclick=()=>{pendingPlayerPhoto="__REMOVE__";editingPlayerPhoto="";$("#playerPhotoPreview").removeAttribute("src");$("#playerPhotoPlaceholder").style.display="block";};
-$("#playerForm").addEventListener("submit",async e=>{e.preventDefault();const b=e.submitter,name=$("#playerName").value.trim(),position=$("#playerPosition").value.trim().toUpperCase();if(!name||!position)return msg("#playerMessage","Name and position are required.","error");const id=$("#playerId").value||slug(name),photo=pendingPlayerPhoto==="__REMOVE__"?"":pendingPlayerPhoto||editingPlayerPhoto||"";busy(b,true,"Saving…");try{await setDoc(doc(db,"players",id),{name,position,number:$("#playerNumber").value.trim(),active:$("#playerActive").value==="true",photoData:photo,photoPositionY:Number($("#playerPhotoPosition").value)||20,updatedAt:serverTimestamp()},{merge:true});$("#playerDialog").close();toast("Player saved ✓","ok");}catch(x){msg("#playerMessage",friendly(x),"error");}finally{busy(b,false,"Save Player");}});
+$("#useCutoutBtn").onclick=()=>setPlayerPhotoChoice("cutout");
+$("#useOriginalBtn").onclick=()=>setPlayerPhotoChoice("original");
+function setPlayerPhotoChoice(mode){
+  if(mode==="cutout"&&!pendingPlayerCutoutPhoto)return;
+  playerPhotoChoice=mode;pendingPlayerPhoto=mode==="cutout"?pendingPlayerCutoutPhoto:pendingPlayerOriginalPhoto;
+  preview("#playerPhotoPreview",pendingPlayerPhoto);$("#playerPhotoPlaceholder").style.display=pendingPlayerPhoto?"none":"block";
+  $("#useCutoutBtn").classList.toggle("active",mode==="cutout");$("#useOriginalBtn").classList.toggle("active",mode==="original");
+  $("#cutoutBadge").textContent=mode==="cutout"?"CUTOUT SELECTED":"ORIGINAL SELECTED";
+}
+$("#playerPhotoFile").onchange=async e=>{
+  const f=e.target.files?.[0];if(!f)return;
+  pendingPlayerCutoutPhoto="";playerPhotoChoice="original";$("#cutoutChoice").hidden=true;
+  try{
+    msg("#cutoutStatus","Preparing original photo…");pendingPlayerOriginalPhoto=await compress(f,900,.8,300000);pendingPlayerPhoto=pendingPlayerOriginalPhoto;
+    preview("#playerPhotoPreview",pendingPlayerOriginalPhoto);$("#playerPhotoPlaceholder").style.display="none";$("#cutoutBadge").textContent="PHOTO READY";
+    if(!$("#autoCutoutToggle").checked){msg("#cutoutStatus","Original photo ready. Auto cutout is off.","ok");toast("Player photo ready ✓","ok");return;}
+    msg("#cutoutStatus","Starting AI background removal…");$("#cutoutBadge").textContent="AI PROCESSING";
+    pendingPlayerCutoutPhoto=await autoRemovePlayerBackground(f);
+    $("#cutoutChoice").hidden=false;setPlayerPhotoChoice("cutout");msg("#cutoutStatus","Background removed ✓ Choose Cutout or Original before saving.","ok");toast("Auto cutout ready ✓","ok");
+  }catch(x){
+    pendingPlayerPhoto=pendingPlayerOriginalPhoto||"";playerPhotoChoice="original";if(pendingPlayerPhoto)preview("#playerPhotoPreview",pendingPlayerPhoto);
+    $("#cutoutBadge").textContent="ORIGINAL READY";msg("#cutoutStatus","Auto cutout unavailable. Original photo is ready to save.","error");toast("Cutout failed — original kept.","error");console.warn("background removal",x);
+  }
+};
+async function autoRemovePlayerBackground(file){
+  if(!bgRemovalModulePromise)bgRemovalModulePromise=import("https://esm.sh/@imgly/background-removal@1.7.0?bundle&deps=onnxruntime-web@1.21.0-dev.20250206-d981b153d3");
+  const mod=await bgRemovalModulePromise,remove=mod.removeBackground||mod.default;
+  if(typeof remove!=="function")throw new Error("Background removal module unavailable.");
+  const blob=await remove(file,{model:"small",output:{format:"image/webp",quality:.92},progress:(key,current,total)=>{
+    if(!total)return;const pct=Math.max(0,Math.min(100,Math.round(current/total*100)));msg("#cutoutStatus",(String(key).startsWith("compute:")?"Processing player… ":"Loading AI model… ")+pct+"%");
+  }});
+  return compress(blob,1000,.84,340000);
+}
+$("#removePlayerPhoto").onclick=()=>{pendingPlayerPhoto="__REMOVE__";pendingPlayerOriginalPhoto="";pendingPlayerCutoutPhoto="";editingPlayerPhoto="";playerPhotoChoice="original";$("#playerPhotoPreview").removeAttribute("src");$("#playerPhotoPlaceholder").style.display="block";$("#cutoutChoice").hidden=true;$("#cutoutBadge").textContent="AUTO CUTOUT";msg("#cutoutStatus","Player photo will be removed when you save.");};
+$("#playerForm").addEventListener("submit",async e=>{
+  e.preventDefault();const b=e.submitter,name=$("#playerName").value.trim(),position=$("#playerPosition").value.trim().toUpperCase();if(!name||!position)return msg("#playerMessage","Name and position are required.","error");
+  const id=$("#playerId").value||slug(name),photo=pendingPlayerPhoto==="__REMOVE__"?"":pendingPlayerPhoto||editingPlayerPhoto||"";busy(b,true,"Saving…");
+  try{await setDoc(doc(db,"players",id),{name,position,number:$("#playerNumber").value.trim(),active:$("#playerActive").value==="true",photoData:photo,photoMode:photo?playerPhotoChoice:"",photoPositionY:Number($("#playerPhotoPosition").value)||20,updatedAt:serverTimestamp()},{merge:true});$("#playerDialog").close();toast("Player saved ✓","ok");}
+  catch(x){msg("#playerMessage",friendly(x),"error");}finally{busy(b,false,"Save Player");}
+});
 
 function renderOpponents(){const el=$("#opponentAdminList");el.innerHTML=opponents.length?opponents.map(o=>'<article class="opponent-card">'+(o.logoData?'<img src="'+o.logoData+'" alt="'+esc(o.name)+' logo">':'<div class="crest-placeholder">'+esc((o.code||"OP").slice(0,3))+'</div>')+'<h3>'+esc(o.name||"Opponent")+'</h3><small>'+esc(o.code||"")+'</small><div class="card-actions"><button data-edit-opponent="'+o.id+'">Edit</button><button class="danger" data-delete-opponent="'+o.id+'">Delete</button></div></article>').join(""):'<div class="empty">No opponents yet.</div>';el.querySelectorAll("[data-edit-opponent]").forEach(b=>b.onclick=()=>openOpponent(b.dataset.editOpponent));el.querySelectorAll("[data-delete-opponent]").forEach(b=>b.onclick=()=>deleteOpponent(b.dataset.deleteOpponent));}
 $("#newOpponentBtn").onclick=()=>openOpponent("");
@@ -108,25 +153,108 @@ function applySettings(){$("#settingCurrentSeason").value=settings.currentSeason
 $("#exportBackupBtn").onclick=()=>{const data={exportedAt:new Date().toISOString(),version:"2.0",matches:clean(matches),events:clean(events),opponents:clean(opponents),players:clean(players),albums:clean(albums),media:clean(media),settings:clean(settings)},blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"}),u=URL.createObjectURL(blob),a=document.createElement("a");a.href=u;a.download="tebakang-edu-club-hub-backup-"+new Date().toISOString().slice(0,10)+".json";a.click();URL.revokeObjectURL(u);};
 
 function fillOpponents(){const opts=opponents.map(o=>'<option value="'+o.id+'">'+esc(o.name)+' ('+esc(o.code||"")+')</option>').join("");["#createOpponent","#editOpponent"].forEach(sel=>{const el=$(sel);if(!el)return;const old=el.value;el.innerHTML='<option value="">Choose opponent</option>'+opts;if(opponents.some(o=>o.id===old))el.value=old;});}
-function fillPlayers(){const active=players.filter(p=>p.active!==false),opts=active.map(p=>'<option value="'+p.id+'">#'+esc(p.number||"—")+' '+esc(p.name)+' · '+esc(p.position||"")+'</option>').join("");["#editMotm","#eventPlayer","#eventSecondary"].forEach(sel=>{const el=$(sel);if(!el)return;const old=el.value;el.innerHTML='<option value="">Not selected</option>'+opts;if(active.some(p=>p.id===old))el.value=old;});}
+function fillPlayers(){const active=players.filter(p=>p.active!==false),opts=active.map(p=>'<option value="'+p.id+'">#'+esc(p.number||"—")+' '+esc(p.name)+' · '+esc(p.position||"")+'</option>').join("");["#editMotm","#eventPlayer","#eventSecondary","#posterHeroPlayer"].forEach(sel=>{const el=$(sel);if(!el)return;const old=el.value,label=sel==="#posterHeroPlayer"?"Auto select":"Not selected";el.innerHTML='<option value="">'+label+'</option>'+opts;if(active.some(p=>p.id===old))el.value=old;});}
 function fillMatchSelects(){const opts=matches.map(m=>'<option value="'+m.id+'">'+date(m.kickoff)+' · TEDU vs '+esc(m.opponent||"Opponent")+'</option>').join("");$("#albumMatch").innerHTML='<option value="">None</option>'+opts;}
 
+$$("[data-poster-style]").forEach(b=>b.onclick=()=>{$$("#posterStyleStrip [data-poster-style]");$("#posterStyle").value=b.dataset.posterStyle;$$("#matchManager [data-poster-style]").forEach(x=>x.classList.toggle("active",x===b));generatePoster();});
+$("#posterType").onchange=generatePoster;$("#posterHeroPlayer").onchange=generatePoster;
 $("#generatePosterBtn").onclick=generatePoster;
-$("#downloadPosterBtn").onclick=()=>{const canvas=$("#posterCanvas");canvas.toBlob(blob=>{if(!blob)return;const u=URL.createObjectURL(blob),a=document.createElement("a");a.href=u;a.download="tebakang-edu-"+($("#posterType").value||"poster").toLowerCase()+"-"+new Date().toISOString().slice(0,10)+".png";a.click();URL.revokeObjectURL(u);},"image/png");};
+$("#downloadPosterBtn").onclick=()=>{const canvas=$("#posterCanvas");canvas.toBlob(blob=>{if(!blob)return;const u=URL.createObjectURL(blob),a=document.createElement("a"),m=matches.find(x=>x.id===selectedMatchId),style=($("#posterStyle").value||"SIGNATURE").toLowerCase(),type=($("#posterType").value||"poster").toLowerCase();a.href=u;a.download="tebakang-edu-"+type+"-"+style+"-"+slug(m?.opponent||"match")+".png";a.click();URL.revokeObjectURL(u);},"image/png");};
+
 async function generatePoster(){
   const m=matches.find(x=>x.id===selectedMatchId);if(!m)return;
-  const type=$("#posterType").value,canvas=$("#posterCanvas"),x=canvas.getContext("2d"),W=canvas.width,H=canvas.height;await document.fonts.ready;x.clearRect(0,0,W,H);
-  const g=x.createLinearGradient(0,0,W,H);g.addColorStop(0,"#03100b");g.addColorStop(.55,"#0b2118");g.addColorStop(1,"#030706");x.fillStyle=g;x.fillRect(0,0,W,H);x.globalAlpha=.1;x.strokeStyle="#29d17d";x.lineWidth=2;for(let i=-300;i<1400;i+=90){x.beginPath();x.moveTo(i,0);x.lineTo(i+700,H);x.stroke();}x.globalAlpha=1;x.fillStyle="#29d17d";x.fillRect(70,70,120,8);x.fillStyle="#efc75e";x.fillRect(W-190,70,120,8);
-  const title=type==="FULLTIME"?"FULL TIME":type==="LINEUP"?"STARTING XI":type==="MOTM"?"MAN OF THE MATCH":"MATCHDAY";ct(x,title,W/2,150,"700 72px Oswald","center","#fff");ct(x,(m.matchType||"Friendly Match").toUpperCase(),W/2,205,"700 24px Inter","center","#9fb1a6");
-  const club=await li("/assets/tebakang-edu-logo.webp"),opp=await li(m.opponentLogo||"/assets/katma-placeholder.svg");
-  if(type==="MOTM"){const p=players.find(v=>v.id===m.motmPlayerId);if(p&&p.photoData){const ph=await li(p.photoData);cover(x,ph,120,300,840,620);x.fillStyle="rgba(3,8,6,.34)";x.fillRect(120,300,840,620);}contain(x,club,80,1040,120,120);ct(x,(p?.name||m.motmPlayerName||"NOT SELECTED").toUpperCase(),W/2,1010,"700 70px Oswald","center","#fff");ct(x,p?((p.position||"PLAYER")+" · #"+(p.number||"—")):"SELECT MOTM IN INFO",W/2,1070,"700 24px Inter","center","#29d17d");}
-  else if(type==="LINEUP"){contain(x,club,70,260,150,150);contain(x,opp,W-220,260,150,150);ct(x,"TEBAKANG EDU",240,350,"700 34px Oswald","left","#fff");ct(x,(m.opponent||"OPPONENT").toUpperCase(),W-240,350,"700 34px Oswald","right","#fff");const xi=(m.starters||[]).map(id=>players.find(p=>p.id===id)).filter(Boolean);let y=510;xi.slice(0,6).forEach((p,i)=>{ct(x,String(i+1).padStart(2,"0")+"  "+p.name.toUpperCase(),130,y+i*95,"600 34px Oswald","left","#fff");ct(x,p.position||"",130,y+34+i*95,"700 16px Inter","left","#29d17d");});xi.slice(6).forEach((p,i)=>{ct(x,String(i+7).padStart(2,"0")+"  "+p.name.toUpperCase(),575,y+i*95,"600 34px Oswald","left","#fff");ct(x,p.position||"",575,y+34+i*95,"700 16px Inter","left","#29d17d");});}
-  else{contain(x,club,105,325,300,300);contain(x,opp,W-405,325,300,300);ct(x,"TEBAKANG EDU",255,690,"700 42px Oswald","center","#fff");ct(x,(m.opponent||"OPPONENT").toUpperCase(),W-255,690,"700 42px Oswald","center","#fff");if(type==="FULLTIME")ct(x,String(m.homeScore??0)+"  —  "+String(m.awayScore??0),W/2,835,"700 122px Oswald","center","#fff");else ct(x,"VS",W/2,545,"700 80px Oswald","center","#efc75e");const kd=m.kickoff?.toDate?m.kickoff.toDate():null;if(kd){ct(x,kd.toLocaleDateString("en-MY",{day:"2-digit",month:"long",year:"numeric"}).toUpperCase(),W/2,type==="FULLTIME"?950:850,"700 30px Inter","center","#fff");if(type!=="FULLTIME")ct(x,kd.toLocaleTimeString("en-MY",{hour:"numeric",minute:"2-digit"}).toUpperCase(),W/2,900,"700 24px Inter","center","#9fb1a6");}ct(x,(m.venue||"VENUE TBA").toUpperCase(),W/2,type==="FULLTIME"?1005:960,"700 22px Inter","center","#9fb1a6");}
-  ct(x,"KALAH BIASA, MENANG LUAR BIASA.",W/2,H-110,"700 22px Inter","center","#efc75e");ct(x,"TEBAKANG EDU CLUB HUB",W/2,H-70,"700 18px Inter","center","#8fa096");msg("#posterMessage","Poster generated. Download PNG when ready.","ok");
+  const type=$("#posterType").value||"MATCHDAY",style=$("#posterStyle").value||"SIGNATURE",canvas=$("#posterCanvas"),x=canvas.getContext("2d"),W=canvas.width,H=canvas.height;
+  await document.fonts.ready;x.clearRect(0,0,W,H);drawPosterBackground(x,style,W,H,type);
+  const club=await li("/assets/tebakang-edu-logo.webp"),opp=await li(m.opponentLogo||"/assets/katma-placeholder.svg"),hero=pickPosterPlayer(m,type);
+  if(type==="MATCHDAY")await drawMatchdayPoster(x,m,style,club,opp,hero,W,H);
+  else if(type==="FULLTIME")await drawFulltimePoster(x,m,style,club,opp,hero,W,H);
+  else if(type==="LINEUP")await drawLineupPoster(x,m,style,club,opp,hero,W,H);
+  else await drawMotmPoster(x,m,style,club,hero,W,H);
+  posterFooter(x,style,W,H);msg("#posterMessage",style+" "+type+" poster ready ✓","ok");
 }
-function ct(ctx,text,x,y,font,align,color){ctx.save();ctx.textAlign=align;ctx.fillStyle=color;ctx.font=font;ctx.fillText(text,x,y);ctx.restore();}
+function pickPosterPlayer(m,type){
+  const chosen=$("#posterHeroPlayer").value;if(chosen)return players.find(p=>p.id===chosen);
+  if(type==="MOTM"&&m.motmPlayerId)return players.find(p=>p.id===m.motmPlayerId);
+  const first=(m.starters||[]).find(id=>players.some(p=>p.id===id));return players.find(p=>p.id===first)||players.find(p=>p.active!==false&&p.photoData);
+}
+function drawPosterBackground(ctx,style,W,H,type){
+  ctx.save();
+  if(style==="STADIUM"){
+    let g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,"#020504");g.addColorStop(.58,"#071710");g.addColorStop(1,"#020403");ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+    [["#ffffff",100,0],["#29d17d",W-100,0]].forEach(([c,x])=>{const r=ctx.createRadialGradient(x,60,0,x,60,520);r.addColorStop(0,c+"66");r.addColorStop(.2,c+"18");r.addColorStop(1,"transparent");ctx.fillStyle=r;ctx.fillRect(0,0,W,H);});
+    ctx.globalAlpha=.14;ctx.fillStyle="#dff8e8";for(let i=0;i<8;i++)ctx.fillRect(60+i*38,95,22,8);for(let i=0;i<8;i++)ctx.fillRect(W-350+i*38,95,22,8);ctx.globalAlpha=1;
+    const fog=ctx.createLinearGradient(0,H*.58,0,H);fog.addColorStop(0,"transparent");fog.addColorStop(.45,"rgba(41,209,125,.08)");fog.addColorStop(1,"rgba(255,255,255,.03)");ctx.fillStyle=fog;ctx.fillRect(0,H*.5,W,H*.5);
+  }else if(style==="ELITE"){
+    ctx.fillStyle="#050606";ctx.fillRect(0,0,W,H);ctx.fillStyle="#111512";ctx.fillRect(56,0,2,H);ctx.fillStyle="#efc75e";ctx.fillRect(78,70,7,210);
+    ctx.globalAlpha=.05;ctx.font="700 210px Oswald";ctx.fillStyle="#ffffff";ctx.translate(W*.58,H*.52);ctx.rotate(-Math.PI/2);ctx.fillText(type,0,0);ctx.setTransform(1,0,0,1,0,0);ctx.globalAlpha=1;
+    const g=ctx.createRadialGradient(W*.75,H*.35,0,W*.75,H*.35,620);g.addColorStop(0,"rgba(239,199,94,.12)");g.addColorStop(1,"transparent");ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+  }else{
+    const g=ctx.createLinearGradient(0,0,W,H);g.addColorStop(0,"#03100b");g.addColorStop(.52,"#0b2118");g.addColorStop(1,"#030706");ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+    ctx.globalAlpha=.1;ctx.strokeStyle="#29d17d";ctx.lineWidth=2;for(let i=-400;i<1500;i+=82){ctx.beginPath();ctx.moveTo(i,0);ctx.lineTo(i+760,H);ctx.stroke();}ctx.globalAlpha=1;
+    ctx.fillStyle="#29d17d";ctx.fillRect(68,66,122,8);ctx.fillStyle="#efc75e";ctx.fillRect(W-190,66,122,8);
+    ctx.globalAlpha=.04;ctx.font="700 170px Oswald";ctx.fillStyle="#fff";ctx.fillText("TEDU",W-455,H-100);ctx.globalAlpha=1;
+  }
+  ctx.restore();
+}
+async function drawMatchdayPoster(ctx,m,style,club,opp,p,W,H){
+  posterKicker(ctx,"MATCHDAY",style,74,150);fitCt(ctx,(m.matchType||"Friendly Match").toUpperCase(),74,200,560,26,"Inter","left",style==="ELITE"?"#efc75e":"#9fb1a6");
+  if(p?.photoData)await drawPosterPlayer(ctx,p,style,20,240,610,970);
+  else{ctx.globalAlpha=.08;ctx.fillStyle="#fff";ctx.font="700 470px Oswald";ctx.fillText("07",-10,980);ctx.globalAlpha=1;}
+  contain(ctx,club,620,275,145,145);contain(ctx,opp,850,275,145,145);ct(ctx,"VS",810,367,"700 44px Oswald","center",style==="ELITE"?"#efc75e":"#29d17d");
+  fitCt(ctx,"TEBAKANG EDU",810,495,420,49,"Oswald","center","#fff");fitCt(ctx,(m.opponent||"OPPONENT").toUpperCase(),810,555,420,49,"Oswald","center","#fff");
+  const kd=posterDateParts(m);ct(ctx,kd.date,810,680,"700 28px Inter","center","#fff");ct(ctx,kd.time,810,728,"700 23px Inter","center",style==="ELITE"?"#efc75e":"#29d17d");
+  wrapCt(ctx,(m.venue||"VENUE TBA").toUpperCase(),810,805,390,29,style==="ELITE"?"#cfc7a8":"#a8b8ae");
+  if(m.matchday)ct(ctx,"MATCHDAY "+m.matchday,810,890,"700 22px Inter","center","#efc75e");
+  if(p){fitCt(ctx,(p.name||"").toUpperCase(),74,1165,520,58,"Oswald","left","#fff");ct(ctx,"#"+(p.number||"—")+" · "+(p.position||"PLAYER"),76,1212,"700 18px Inter","left",style==="ELITE"?"#efc75e":"#29d17d");}
+}
+async function drawFulltimePoster(ctx,m,style,club,opp,p,W,H){
+  posterKicker(ctx,"FULL TIME",style,74,150);
+  if(p?.photoData)await drawPosterPlayer(ctx,p,style,610,250,470,940);
+  contain(ctx,club,85,270,155,155);contain(ctx,opp,375,270,155,155);ct(ctx,"—",310,370,"700 45px Oswald","center","#68766e");
+  fitCt(ctx,String(m.homeScore??0),120,650,190,220,"Oswald","left","#fff");ct(ctx,"—",315,625,"700 90px Oswald","center",style==="ELITE"?"#efc75e":"#29d17d");fitCt(ctx,String(m.awayScore??0),405,650,190,220,"Oswald","center","#fff");
+  fitCt(ctx,"TEBAKANG EDU",76,755,500,50,"Oswald","left","#fff");fitCt(ctx,(m.opponent||"OPPONENT").toUpperCase(),76,815,500,50,"Oswald","left","#fff");
+  const result=Number(m.homeScore)>Number(m.awayScore)?"VICTORY":Number(m.homeScore)===Number(m.awayScore)?"DRAW":"FULL TIME";ct(ctx,result,78,900,"700 28px Inter","left","#efc75e");
+  const kd=posterDateParts(m);ct(ctx,kd.date,78,958,"700 20px Inter","left","#a9b7ae");wrapCt(ctx,(m.venue||"VENUE TBA").toUpperCase(),78,1007,470,22,"#8fa096");
+  if(p){fitCt(ctx,(p.name||"").toUpperCase(),625,1190,390,52,"Oswald","left","#fff");ct(ctx,"#"+(p.number||"—")+" · "+(p.position||"PLAYER"),627,1230,"700 16px Inter","left",style==="ELITE"?"#efc75e":"#29d17d");}
+}
+async function drawLineupPoster(ctx,m,style,club,opp,p,W,H){
+  posterKicker(ctx,"STARTING XI",style,74,145);ct(ctx,(m.formation||"FORMATION TBA").toUpperCase(),74,192,"700 20px Inter","left",style==="ELITE"?"#efc75e":"#29d17d");
+  if(p?.photoData)await drawPosterPlayer(ctx,p,style,15,240,385,960);
+  contain(ctx,club,70,1040,105,105);contain(ctx,opp,230,1040,105,105);
+  const xi=(m.starters||[]).map(id=>players.find(v=>v.id===id)).filter(Boolean),x0=430,y0=310,row=78;
+  xi.forEach((pl,i)=>{const col=i<6?0:1,idx=i<6?i:i-6,xp=x0+col*305,yp=y0+idx*row;ctx.fillStyle=style==="ELITE"?"#efc75e":"#29d17d";ctx.font="700 18px Inter";ctx.fillText(String(i+1).padStart(2,"0"),xp,yp);fitCt(ctx,(pl.name||"PLAYER").toUpperCase(),xp+42,yp,245,29,"Oswald","left","#fff");ct(ctx,(pl.position||"").toUpperCase(),xp+42,yp+26,"700 13px Inter","left","#899a90");});
+  if(!xi.length)ct(ctx,"LINEUP TBA",690,610,"700 58px Oswald","center","#fff");
+  fitCt(ctx,"TEBAKANG EDU",430,1025,520,45,"Oswald","left","#fff");fitCt(ctx,"vs "+(m.opponent||"OPPONENT").toUpperCase(),430,1075,520,34,"Oswald","left","#a4b3aa");
+  const kd=posterDateParts(m);ct(ctx,kd.date+" · "+kd.time,430,1130,"700 17px Inter","left","#efc75e");
+}
+async function drawMotmPoster(ctx,m,style,club,p,W,H){
+  posterKicker(ctx,"MAN OF THE MATCH",style,74,145);
+  if(p?.photoData)await drawPosterPlayer(ctx,p,style,350,175,730,1030);
+  contain(ctx,club,76,230,120,120);
+  if(p){
+    ctx.globalAlpha=.055;ctx.fillStyle="#fff";ctx.font="700 520px Oswald";ctx.fillText(String(p.number||"07"),20,920);ctx.globalAlpha=1;
+    fitCt(ctx,(p.name||"PLAYER").toUpperCase(),74,1010,630,88,"Oswald","left","#fff");ct(ctx,"#"+(p.number||"—")+" · "+(p.position||"PLAYER"),78,1060,"700 20px Inter","left",style==="ELITE"?"#efc75e":"#29d17d");
+    const st=matchPlayerStats(m,p);ctx.fillStyle="rgba(255,255,255,.05)";roundRect(ctx,74,1110,430,82,16);ct(ctx,String(st.goals),110,1160,"700 36px Oswald","center","#fff");ct(ctx,"GOALS",162,1157,"700 12px Inter","left","#99aa9f");ct(ctx,String(st.assists),315,1160,"700 36px Oswald","center","#fff");ct(ctx,"ASSISTS",365,1157,"700 12px Inter","left","#99aa9f");
+  }else fitCt(ctx,"SELECT MOTM",74,920,760,92,"Oswald","left","#fff");
+  fitCt(ctx,"TEBAKANG EDU",76,1260,530,31,"Oswald","left","#efc75e");
+}
+async function drawPosterPlayer(ctx,p,style,x,y,w,h){
+  if(!p?.photoData)return;const img=await li(p.photoData);ctx.save();
+  const glow=ctx.createRadialGradient(x+w*.55,y+h*.48,10,x+w*.55,y+h*.48,w*.72);glow.addColorStop(0,style==="ELITE"?"rgba(239,199,94,.16)":"rgba(41,209,125,.2)");glow.addColorStop(1,"transparent");ctx.fillStyle=glow;ctx.fillRect(x-80,y-80,w+160,h+160);
+  if(p.photoMode==="cutout"){containBottom(ctx,img,x,y,w,h);}else{ctx.globalAlpha=.84;cover(ctx,img,x,y,w,h);const fade=ctx.createLinearGradient(0,y,0,y+h);fade.addColorStop(.5,"rgba(0,0,0,0)");fade.addColorStop(1,"rgba(3,7,5,.9)");ctx.fillStyle=fade;ctx.fillRect(x,y,w,h);}
+  ctx.restore();
+}
+function matchPlayerStats(m,p){const es=events.filter(e=>e.matchId===m.id&&e.team==="home"),goals=es.filter(e=>e.type==="GOAL"&&e.playerId===p.id).length,assists=es.filter(e=>e.type==="GOAL"&&e.secondaryPlayerId===p.id).length;return{goals,assists};}
+function posterKicker(ctx,text,style,x,y){ct(ctx,text,x,y,"700 58px Oswald","left","#fff");ctx.fillStyle=style==="ELITE"?"#efc75e":"#29d17d";ctx.fillRect(x,y+18,118,6);}
+function posterFooter(ctx,style,W,H){ctx.fillStyle="rgba(2,5,3,.76)";ctx.fillRect(0,H-95,W,95);ct(ctx,"KALAH BIASA, MENANG LUAR BIASA.",72,H-50,"700 17px Inter","left",style==="ELITE"?"#efc75e":"#efc75e");ct(ctx,"TEBAKANG EDU CLUB HUB",W-72,H-50,"700 15px Inter","right","#8fa096");}
+function posterDateParts(m){const d=m.kickoff?.toDate?m.kickoff.toDate():null;if(!d)return{date:"DATE TBA",time:"TIME TBA"};return{date:d.toLocaleDateString("en-MY",{day:"2-digit",month:"long",year:"numeric"}).toUpperCase(),time:d.toLocaleTimeString("en-MY",{hour:"numeric",minute:"2-digit"}).toUpperCase()};}
+function ct(ctx,text,x,y,font,align,color){ctx.save();ctx.textAlign=align;ctx.fillStyle=color;ctx.font=font;ctx.fillText(String(text??""),x,y);ctx.restore();}
+function fitCt(ctx,text,x,y,maxWidth,startSize,family="Oswald",align="left",color="#fff"){text=String(text??"");let size=startSize;ctx.save();ctx.textAlign=align;ctx.fillStyle=color;while(size>14){ctx.font="700 "+size+"px "+family;if(ctx.measureText(text).width<=maxWidth)break;size-=2;}ctx.fillText(text,x,y);ctx.restore();}
+function wrapCt(ctx,text,x,y,maxWidth,size,color){const words=String(text||"").split(/\s+/),lines=[];let line="";ctx.save();ctx.font="700 "+size+"px Inter";ctx.fillStyle=color;ctx.textAlign="center";for(const w of words){const t=line?line+" "+w:w;if(ctx.measureText(t).width>maxWidth&&line){lines.push(line);line=w;}else line=t;}if(line)lines.push(line);lines.slice(0,2).forEach((ln,i)=>ctx.fillText(ln,x,y+i*(size+8)));ctx.restore();}
+function roundRect(ctx,x,y,w,h,r){ctx.beginPath();ctx.roundRect(x,y,w,h,r);ctx.fill();}
 function li(src){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=()=>rej(new Error("Could not load poster image."));i.src=src;});}
 function contain(ctx,img,x,y,w,h){const r=Math.min(w/img.width,h/img.height),nw=img.width*r,nh=img.height*r;ctx.drawImage(img,x+(w-nw)/2,y+(h-nh)/2,nw,nh);}
+function containBottom(ctx,img,x,y,w,h){const r=Math.min(w/img.width,h/img.height),nw=img.width*r,nh=img.height*r;ctx.drawImage(img,x+(w-nw)/2,y+h-nh,nw,nh);}
 function cover(ctx,img,x,y,w,h){const r=Math.max(w/img.width,h/img.height),nw=img.width*r,nh=img.height*r;ctx.save();ctx.beginPath();ctx.rect(x,y,w,h);ctx.clip();ctx.drawImage(img,x+(w-nw)/2,y+(h-nh)/2,nw,nh);ctx.restore();}
 
 async function compress(file,maxDim=700,q=.74,target=280000){if(!file.type.startsWith("image/"))throw new Error("Choose an image file.");const u=URL.createObjectURL(file);try{const im=await new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=()=>rej(new Error("Could not read image."));i.src=u;}),scale=Math.min(1,maxDim/Math.max(im.naturalWidth,im.naturalHeight)),w=Math.max(1,Math.round(im.naturalWidth*scale)),h=Math.max(1,Math.round(im.naturalHeight*scale)),c=document.createElement("canvas");c.width=w;c.height=h;c.getContext("2d").drawImage(im,0,0,w,h);let data=c.toDataURL("image/webp",q);while(data.length>target&&q>.36){q-=.07;data=c.toDataURL("image/webp",q);}if(data.length>700000)throw new Error("Image is still too large. Choose a smaller photo.");return data;}finally{URL.revokeObjectURL(u);}}
