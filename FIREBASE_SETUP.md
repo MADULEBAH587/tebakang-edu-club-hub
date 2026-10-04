@@ -1,23 +1,39 @@
-# Firebase setup — Tebakang Edu Club Hub
+# Firebase setup — Tebakang Edu Club Hub v2
 
-This project intentionally stays on Firebase Spark / no billing.
+The Club Hub is designed to stay on Firebase Spark / no billing.
 
-## Required Firebase Console steps
-1. Build > Firestore Database > Create database.
-2. Use Production mode.
-3. Authentication > Sign-in method > enable Email/Password.
-4. Authentication > Users > Add user. Create only the admin account(s) you control.
-5. Copy the admin user's UID.
-6. Replace REPLACE_WITH_ADMIN_UID in firestore.rules with that UID.
-7. Firestore Database > Rules > paste the updated rules and Publish.
-8. Authentication > Settings > Authorized domains > add:
-   - tebakang-edu-club-hub.netlify.app
+## Required Firebase services
+1. Firestore Database
+2. Authentication with Email/Password enabled
+3. One controlled administrator account whose UID matches `firestore.rules`
 
-Do not enable Firebase Storage for this architecture. Logos/photos are static GitHub/Netlify assets.
+## Production domain
+The production site is:
+- tebakang-edu-club-hub.vercel.app
+
+If a Firebase Authentication feature requires an authorized domain, use the Vercel production domain above. Netlify is no longer part of the production architecture.
 
 ## Collections used
 - matches
-- matches/{matchId}/events
+- events
 - players
+- opponents
+- albums
+- media
+- settings/public
 
-Public pages use realtime Firestore listeners with static fallback data if Firestore is empty/unavailable.
+## Images
+Firebase Storage is intentionally not required for the current zero-cost architecture.
+
+The browser compresses:
+- player photos to WebP before saving
+- opponent logos to WebP before saving
+- gallery photos to WebP before saving
+
+Gallery photos are stored as separate documents so an album is not constrained to one large Firestore document.
+
+## Realtime behavior
+Public pages read Firestore in realtime. Deleted or hidden matches disappear from the public dataset immediately. If no match exists, the Match Centre renders a true empty state rather than static fallback match data.
+
+## Rules
+The repository `firestore.rules` allows public reads and restricts all writes to the authenticated administrator UID.
