@@ -3,7 +3,7 @@
 Premium, animated, mobile-first digital clubhouse for Tebakang Educator FC.
 
 ## Stack
-- Netlify Free — hosting + continuous deployment
+- Vercel Hobby — hosting + continuous deployment
 - GitHub — source control
 - Firebase Spark — Firestore + Email/Password Authentication
 - No Firebase Storage / no billing dependency
@@ -45,4 +45,4 @@ Images are compressed client-side to WebP before being written as small Firestor
 Public reads are allowed for the public club site. Firestore writes require the authenticated administrator UID defined in `firestore.rules`.
 
 ## Production
-https://tebakang-edu-club-hub.netlify.app
+https://tebakang-edu-club-hub.vercel.app
