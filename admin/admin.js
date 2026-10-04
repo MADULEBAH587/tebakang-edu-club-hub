@@ -103,7 +103,6 @@ $("#exportBackupBtn").onclick=()=>{const data={exportedAt:new Date().toISOString
 function fillOpponents(){const opts=opponents.map(o=>'<option value="'+o.id+'">'+esc(o.name)+' ('+esc(o.code||"")+')</option>').join("");["#createOpponent","#editOpponent"].forEach(sel=>{const el=$(sel);if(!el)return;const old=el.value;el.innerHTML='<option value="">Choose opponent</option>'+opts;if(opponents.some(o=>o.id===old))el.value=old;});}
 function fillPlayers(){const active=players.filter(p=>p.active!==false),opts=active.map(p=>'<option value="'+p.id+'">#'+esc(p.number||"—")+' '+esc(p.name)+' · '+esc(p.position||"")+'</option>').join("");["#editMotm","#eventPlayer","#eventSecondary"].forEach(sel=>{const el=$(sel);if(!el)return;const old=el.value;el.innerHTML='<option value="">Not selected</option>'+opts;if(active.some(p=>p.id===old))el.value=old;});}
 function fillMatchSelects(){const opts=matches.map(m=>'<option value="'+m.id+'">'+date(m.kickoff)+' · TEDU vs '+esc(m.opponent||"Opponent")+'</option>').join("");$("#albumMatch").innerHTML='<option value="">None</option>'+opts;}
-function fillMatchInfo(){}
 
 $("#generatePosterBtn").onclick=generatePoster;
 $("#downloadPosterBtn").onclick=()=>{const canvas=$("#posterCanvas");canvas.toBlob(blob=>{if(!blob)return;const u=URL.createObjectURL(blob),a=document.createElement("a");a.href=u;a.download="tebakang-edu-"+($("#posterType").value||"poster").toLowerCase()+"-"+new Date().toISOString().slice(0,10)+".png";a.click();URL.revokeObjectURL(u);},"image/png");};
