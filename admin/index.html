@@ -46,6 +46,7 @@
           <article><span>Opponents</span><strong id="countOpponents">0</strong><small>saved clubs</small></article>
           <article><span>Albums</span><strong id="countAlbums">0</strong><small>gallery</small></article>
         </div>
+        <div class="home-match-grid"><article class="panel mini-match"><span class="eyebrow">NEXT MATCH</span><h3 id="adminNextMatch">TBA</h3><p id="adminNextMeta">No upcoming fixture.</p></article><article class="panel mini-match"><span class="eyebrow">LATEST RESULT</span><h3 id="adminLatestMatch">TBA</h3><p id="adminLatestMeta">No completed match.</p></article></div>
         <section class="panel"><div class="panel-head"><div><span class="eyebrow">LATEST</span><h2>Recent matches</h2></div><button data-go="matches" class="secondary">View all</button></div><div id="overviewMatchList" class="match-card-list"></div></section>
       </section>
 
@@ -148,6 +149,7 @@
       <section class="manager-panel" data-match-panel="lineup">
         <div class="lineup-head"><div><span class="eyebrow">TEAM SELECTION</span><h3>Starting XI & Bench</h3></div><label>Formation<select id="editFormation"><option>4-2-3-1</option><option>4-3-3</option><option>4-4-2</option><option>3-5-2</option><option>Custom</option></select></label></div>
         <div class="selection-counts"><span id="xiCount">Starting XI 0/11</span><span id="benchCount">Bench 0</span></div>
+        <div id="lineupPitchPreview" class="admin-pitch"><div class="pitch-mid"></div><div class="pitch-circle"></div></div>
         <p class="muted-copy">Tap a player to cycle: Not Selected → Starting XI → Bench.</p>
         <div id="lineupPlayerGrid" class="lineup-player-grid"></div>
         <div class="sticky-actions"><button id="saveLineupBtn" class="primary grow">Save Lineup</button></div>
