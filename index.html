@@ -42,21 +42,20 @@
     </section>
 
     <section class="section compact reveal">
-      <div class="section-heading"><div><span class="kicker">MATCHDAY</span><h2 id="matchHeading">Latest Result</h2></div><span id="mainStatusBadge" class="status-pill ft">FULL TIME</span></div>
+      <div class="section-heading"><div><span class="kicker">MATCHDAY</span><h2 id="matchHeading">Match Centre</h2></div><span id="mainStatusBadge" class="status-pill ft">TBA</span></div>
       <article id="match-centre" class="scoreboard glass-card">
-        <div class="score-topline"><span id="matchTypeTop">FRIENDLY MATCH</span><span id="matchDateTop">TBA</span></div>
+        <div class="score-topline"><span id="matchTypeTop">NO MATCH</span><span id="matchDateTop">TBA</span></div>
         <div class="score-main">
           <div class="team-block home-team"><div class="crest-frame green"><img src="./assets/tebakang-edu-logo.webp" alt="Tebakang Educator FC"></div><strong>TEBAKANG EDU</strong><span>TEDU</span></div>
-          <div class="score-center"><div id="matchStatusMini" class="status-mini">FT</div><div class="score"><span id="homeScoreMain">0</span><i>—</i><span id="awayScoreMain">2</span></div><small id="scoreCaption">FULL TIME</small></div>
-          <div class="team-block away-team"><div class="crest-frame red"><img id="awayLogoMain" src="./assets/katma-placeholder.svg" alt="Opponent crest"></div><strong id="awayNameMain">KATMA</strong><span id="awayCodeMain">KAT</span></div>
+          <div class="score-center"><div id="matchStatusMini" class="status-mini">TBA</div><div class="score"><span id="homeScoreMain">—</span><i>—</i><span id="awayScoreMain">—</span></div><small id="scoreCaption">NO MATCH</small></div>
+          <div class="team-block away-team"><div class="crest-frame red"><img id="awayLogoMain" alt="Opponent crest"></div><strong id="awayNameMain">TBA</strong><span id="awayCodeMain">OPP</span></div>
         </div>
-        <div class="match-meta"><span id="metaType">⚽ Friendly Match</span><span id="metaVenue">🏟️ Venue TBA</span><span id="metaMatchday">🏁 Club Match</span><button id="shareMatchBtn" class="share-btn" type="button">Share ↗</button></div>
-        <div class="match-tabs"><button class="tab active" data-tab="overview">Overview</button><button class="tab" data-tab="timeline">Timeline</button><button class="tab" data-tab="lineup">Lineup</button><button class="tab" data-tab="stats">Stats</button></div>
+        <div class="match-meta"><span id="metaType">⚽ Match TBA</span><span id="metaVenue">🏟️ Venue TBA</span><span id="metaMatchday">🏁 Club Match</span><button id="shareMatchBtn" class="share-btn" type="button">Share ↗</button></div>
+        <div class="match-tabs"><button class="tab active" data-tab="overview">Overview</button><button class="tab" data-tab="timeline">Timeline</button><button class="tab" data-tab="lineup">Lineup</button></div>
         <div class="tab-panels">
-          <div class="tab-panel active" id="overview"><div class="overview-grid"><div class="event-card"><span>RESULT</span><strong id="overviewResult">0–2</strong><small id="overviewOpponent">Latest match</small></div><div class="event-card"><span>STATUS</span><strong id="overviewStatus">FT</strong><small>Match state</small></div><div class="event-card"><span>MAN OF THE MATCH</span><strong id="overviewMotm">—</strong><small id="overviewSeason">Season 2026</small></div></div></div>
+          <div class="tab-panel active" id="overview"><div class="overview-grid"><div class="event-card"><span>RESULT</span><strong id="overviewResult">—</strong><small id="overviewOpponent">No match selected</small></div><div class="event-card"><span>STATUS</span><strong id="overviewStatus">TBA</strong><small>Match state</small></div><div class="event-card"><span>MAN OF THE MATCH</span><strong id="overviewMotm">—</strong><small id="overviewSeason">Season 2026</small></div></div><p id="matchEmptyState" class="empty-state match-empty">Tiada perlawanan direkodkan.</p></div>
           <div class="tab-panel" id="timeline"><div id="publicTimeline" class="public-timeline"><p class="empty-state">No timeline events recorded yet.</p></div></div>
           <div class="tab-panel" id="lineup"><div id="publicPitch" class="pitch-mini"><div class="pitch-line center"></div><div class="pitch-circle"></div></div><div id="publicBench" class="bench-list"></div></div>
-          <div class="tab-panel" id="stats-panel"><div id="publicMatchStats" class="match-stat-list"><p class="empty-state">Match statistics appear when recorded.</p></div></div>
         </div>
       </article>
     </section>
@@ -92,7 +91,7 @@
 
     <section id="media" class="section reveal public-section">
       <div class="section-heading"><div><span class="kicker">CLUB MEDIA</span><h2>Gallery</h2></div><span class="season-chip">MOMENTS</span></div>
-      <div id="mediaGrid" class="media-grid"></div>
+      <div id="albumGrid" class="album-grid"></div><div id="legacyMediaGrid" class="media-grid"></div>
     </section>
   </main>
 
@@ -100,6 +99,19 @@
   <dialog id="playerModal" class="player-modal">
     <button id="closePlayerModal" class="modal-close" type="button">✕</button>
     <div id="playerModalContent"></div>
+  </dialog>
+
+  <dialog id="galleryModal" class="gallery-modal">
+    <button id="closeGalleryModal" class="modal-close" type="button">✕</button>
+    <div class="gallery-modal-head"><span class="kicker">CLUB GALLERY</span><h2 id="galleryModalTitle">Album</h2><small id="galleryModalMeta"></small></div>
+    <div id="galleryPhotoGrid" class="gallery-photo-grid"></div>
+  </dialog>
+  <dialog id="photoViewer" class="photo-viewer">
+    <button id="closePhotoViewer" class="viewer-close" type="button">✕</button>
+    <button id="prevPhoto" class="viewer-nav prev" type="button">‹</button>
+    <img id="viewerImage" alt="Club gallery photo">
+    <button id="nextPhoto" class="viewer-nav next" type="button">›</button>
+    <div id="viewerCaption" class="viewer-caption"></div>
   </dialog>
 
   <footer><img src="./assets/tebakang-edu-logo.webp" alt="Tebakang Educator FC"><div><strong>TEBAKANG EDU CLUB HUB</strong><span>Kalah biasa, menang luar biasa.</span></div><small>v1.0 · Realtime Firebase</small></footer>
