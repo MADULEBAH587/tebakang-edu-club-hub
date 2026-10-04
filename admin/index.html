@@ -163,8 +163,24 @@
       </section>
 
       <section class="manager-panel" data-match-panel="poster">
-        <div class="poster-controls"><select id="posterType"><option value="MATCHDAY">Matchday</option><option value="FULLTIME">Full Time</option><option value="LINEUP">Starting XI</option><option value="MOTM">MOTM</option></select><button id="generatePosterBtn" class="primary">Generate</button><button id="downloadPosterBtn" class="secondary">Download PNG</button></div>
-        <div class="poster-stage"><canvas id="posterCanvas" width="1080" height="1350"></canvas></div><div id="posterMessage" class="message"></div>
+        <div class="poster-studio-head">
+          <div><span class="eyebrow">POSTER STUDIO v2</span><h3>Generate club artwork</h3><p>Match data, crests and player cutouts are pulled automatically.</p></div>
+          <span class="poster-size-chip">1080 × 1350</span>
+        </div>
+        <div class="poster-controls v2">
+          <label>Poster type<select id="posterType"><option value="MATCHDAY">Matchday</option><option value="LINEUP">Starting XI</option><option value="FULLTIME">Full Time</option><option value="MOTM">MOTM</option></select></label>
+          <label>Featured player<select id="posterHeroPlayer"><option value="">Auto select</option></select></label>
+          <button id="generatePosterBtn" class="primary">Generate Poster</button>
+          <button id="downloadPosterBtn" class="secondary">Download PNG</button>
+        </div>
+        <input id="posterStyle" type="hidden" value="SIGNATURE">
+        <div class="poster-style-carousel" aria-label="Poster design">
+          <button class="poster-style-card signature active" data-poster-style="SIGNATURE" type="button"><span>01</span><strong>SIGNATURE</strong><small>Official club look</small></button>
+          <button class="poster-style-card stadium" data-poster-style="STADIUM" type="button"><span>02</span><strong>STADIUM</strong><small>Lights + atmosphere</small></button>
+          <button class="poster-style-card elite" data-poster-style="ELITE" type="button"><span>03</span><strong>ELITE</strong><small>Premium minimal</small></button>
+        </div>
+        <div class="poster-stage"><canvas id="posterCanvas" width="1080" height="1350"></canvas></div>
+        <div id="posterMessage" class="message"></div>
       </section>
     </div>
   </dialog>
@@ -173,7 +189,18 @@
     <form id="playerForm" class="sheet">
       <div class="sheet-head"><div><span class="eyebrow">PLAYER</span><h2 id="playerDialogTitle">Add Player</h2></div><button type="button" class="icon-close" data-close="playerDialog">✕</button></div>
       <input id="playerId" type="hidden">
-      <div class="player-photo-editor"><div id="playerPhotoFrame" class="player-photo-frame"><span id="playerPhotoPlaceholder">PLAYER</span><img id="playerPhotoPreview" alt="Player preview"></div><label class="photo-button">Change Photo<input id="playerPhotoFile" type="file" accept="image/*" hidden></label><button id="removePlayerPhoto" type="button" class="text-btn">Remove photo</button></div>
+      <div class="player-photo-editor">
+        <div id="playerPhotoFrame" class="player-photo-frame"><span id="playerPhotoPlaceholder">PLAYER</span><img id="playerPhotoPreview" alt="Player preview"></div>
+        <div class="photo-engine-head"><span class="eyebrow">PLAYER PHOTO ENGINE</span><span id="cutoutBadge" class="ai-badge">AUTO CUTOUT</span></div>
+        <label class="auto-cutout-toggle"><input id="autoCutoutToggle" type="checkbox" checked><span>Auto remove background after upload</span></label>
+        <label class="photo-button">Upload / Change Photo<input id="playerPhotoFile" type="file" accept="image/*" hidden></label>
+        <div id="cutoutChoice" class="cutout-choice" hidden>
+          <button id="useCutoutBtn" type="button" class="secondary active">Use Cutout</button>
+          <button id="useOriginalBtn" type="button" class="secondary">Keep Original</button>
+        </div>
+        <div id="cutoutStatus" class="message">Upload a player photo. Background removal runs on this device.</div>
+        <button id="removePlayerPhoto" type="button" class="text-btn">Remove photo</button>
+      </div>
       <div class="form-grid"><label>No.<input id="playerNumber" maxlength="3" placeholder="07"></label><label>Position<input id="playerPosition" placeholder="RW" required></label><label class="wide">Player name<input id="playerName" placeholder="Hasif" required></label><label class="wide">Photo focus<input id="playerPhotoPosition" type="range" min="0" max="100" value="20"><small>Move the focus up/down until the face sits nicely in the card.</small></label><label class="wide">Status<select id="playerActive"><option value="true">Active squad</option><option value="false">Archived / Inactive</option></select></label></div>
       <div class="sticky-actions"><button class="primary grow" type="submit">Save Player</button><button type="button" class="secondary" data-close="playerDialog">Cancel</button></div><div id="playerMessage" class="message"></div>
     </form>
