@@ -168,7 +168,7 @@ async function generatePoster(){
   const W=canvas.width,H=canvas.height;busy(btn,true,"Generating…");msg("#posterMessage","Generating "+style+" "+type+"…");
   try{
     await document.fonts.ready;x.clearRect(0,0,W,H);drawPosterBackground(x,style,W,H,type);
-    const club=await safeLi("/assets/tebakang-edu-logo.webp"),opp=await safeLi(m.opponentLogo||"/assets/katma-placeholder.svg"),hero=pickPosterPlayer(m,type);
+    const club=await li("/assets/tebakang-edu-logo.webp"),opp=await safeLi(m.opponentLogo||"/assets/katma-placeholder.svg"),hero=pickPosterPlayer(m,type);
     if(type==="MATCHDAY")await drawMatchdayPoster(x,m,style,club,opp,hero,W,H);
     else if(type==="FULLTIME")await drawFulltimePoster(x,m,style,club,opp,hero,W,H);
     else if(type==="LINEUP")await drawLineupPoster(x,m,style,club,opp,hero,W,H);
