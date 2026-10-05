@@ -23,7 +23,7 @@ onSnapshot(doc(db,"settings","public"),snap=>{settings=snap.exists()?snap.data()
 $("#seasonFilter")?.addEventListener("change",e=>{seasonFilter=e.target.value;renderArchive();});
 
 function renderAll(){
-  renderVisibility();renderSeasons();renderMainMatch();renderNext();renderForm();renderArchive();renderH2H();renderSquad();renderClubStats();renderGallery();renderTicker();
+  renderVisibility();renderSeasons();renderMainMatch();renderHomeSummary();renderNext();renderForm();renderArchive();renderH2H();renderSquad();renderClubStats();renderGallery();renderTicker();
   const season=currentSeason();if($("#heroSeason"))$("#heroSeason").textContent=season;if($("#squadSeason"))$("#squadSeason").textContent=season;if($("#statsSeason"))$("#statsSeason").textContent=season;
 }
 function renderVisibility(){
@@ -32,6 +32,21 @@ function renderVisibility(){
   $("#h2h")?.classList.toggle("public-hidden",settings.showH2H===false);
   $("#media")?.classList.toggle("public-hidden",settings.showMedia===false);
   $("#matches")?.classList.toggle("public-hidden",settings.showArchive===false);
+}
+function renderHomeSummary(){
+  const live=matches.find(m=>["LIVE","HT","MATCHDAY"].includes(m.status)),latest=matches.find(m=>m.status==="FT"),now=Date.now(),upcoming=[...matches].filter(m=>!["FT","LIVE","HT"].includes(m.status)&&ms(m.kickoff)>=now).sort((a,b)=>ms(a.kickoff)-ms(b.kickoff))[0],m=live||latest||upcoming;
+  const badge=$("#mobileLiveBadge");
+  if(badge){badge.textContent=live?(live.status==="HT"?"HT":"LIVE"):"CLUB";badge.classList.toggle("live",!!live);}
+  if(!m){
+    setText("#homeResultKicker","LATEST RESULT");setText("#homeResultStatus","TBA");setText("#homeLatestScore","—");setText("#homeLatestOpponent","TBA");setText("#homeLatestMeta","No match recorded yet.");$("#homeLatestOpponentLogo")?.removeAttribute("src");return;
+  }
+  const isLive=["LIVE","HT","MATCHDAY"].includes(m.status),isDone=m.status==="FT";
+  setText("#homeResultKicker",isLive?"LIVE MATCH":isDone?"LATEST RESULT":"NEXT MATCH");
+  setText("#homeResultStatus",statusText(m.status));
+  setText("#homeLatestScore",isDone||isLive?String(m.homeScore??0)+"–"+String(m.awayScore??0):"VS");
+  setText("#homeLatestOpponent",(m.opponentCode||m.opponent||"OPP").toUpperCase());
+  setText("#homeLatestMeta",fullDate(m.kickoff)+" · "+(m.venue||"Venue TBA"));
+  const logo=$("#homeLatestOpponentLogo");if(logo){if(m.opponentLogo)logo.src=m.opponentLogo;else logo.removeAttribute("src");}
 }
 function currentSeason(){return String(settings.currentSeason||matches.map(m=>String(m.season||"")).filter(Boolean).sort().reverse()[0]||"2026");}
 function activeMatch(){const chosen=matches.find(m=>m.id===selectedPublicMatchId);if(chosen)return chosen;const live=matches.find(m=>["LIVE","HT","MATCHDAY"].includes(m.status));if(live)return live;const ft=matches.find(m=>m.status==="FT");if(ft)return ft;const now=Date.now();return [...matches].filter(m=>ms(m.kickoff)>=now).sort((a,b)=>ms(a.kickoff)-ms(b.kickoff))[0]||matches[0];}
@@ -87,7 +102,7 @@ function renderArchive(){
     const d=toDate(m.kickoff),day=d?String(d.getDate()).padStart(2,"0"):"—",mon=d?d.toLocaleString("en-MY",{month:"short"}).toUpperCase():"TBA",score=m.status==="FT"||["LIVE","HT"].includes(m.status)?String(m.homeScore??0)+' <small>'+esc(m.status||"")+'</small> '+String(m.awayScore??0):'— <small>'+esc(m.status||"UPCOMING")+'</small> —',logo=m.opponentLogo?'<img src="'+m.opponentLogo+'" alt="'+esc(m.opponent||"Opponent")+'">':'<div class="initial-crest">'+esc((m.opponentCode||"OP").slice(0,2))+'</div>',album=albums.find(a=>a.matchId===m.id&&a.visible!==false);
     return '<article class="match-row '+(m.status==="FT"?"featured":"muted")+'" data-open-match="'+m.id+'" tabindex="0"><div class="match-date"><b>'+day+'</b><span>'+mon+'</span></div><img src="./assets/tebakang-edu-logo.webp" alt="Tebakang Educator FC"><strong>Tebakang Edu</strong><div class="row-score">'+score+'</div><strong>'+esc(m.opponent||"Opponent")+'</strong>'+logo+'<span class="match-type">'+esc(m.matchType||"Friendly")+(album?'<button class="photo-link" data-album="'+album.id+'">Photos</button>':'')+'</span></article>';
   }).join(""):'<p class="empty-state">Tiada perlawanan untuk musim ini.</p>';
-  el.querySelectorAll("[data-open-match]").forEach(card=>{const open=e=>{if(e?.target?.closest("[data-album]"))return;selectedPublicMatchId=card.dataset.openMatch;renderMainMatch();document.getElementById("match-centre").scrollIntoView({behavior:"smooth",block:"start"});};card.addEventListener("click",open);card.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" ")open(e);});});
+  el.querySelectorAll("[data-open-match]").forEach(card=>{const open=e=>{if(e?.target?.closest("[data-album]"))return;selectedPublicMatchId=card.dataset.openMatch;renderMainMatch();location.hash="#match-centre";};card.addEventListener("click",open);card.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" ")open(e);});});
   el.querySelectorAll("[data-album]").forEach(b=>b.addEventListener("click",e=>{e.stopPropagation();openAlbum(b.dataset.album);}));
 }
 
