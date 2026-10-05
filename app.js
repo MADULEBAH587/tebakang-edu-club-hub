@@ -16,9 +16,9 @@ function renderRoute(route=currentRoute()){
   closeSidebar();
   window.scrollTo({top:0,behavior:"auto"});
 }
-function openSidebar(){sidebar?.classList.add("open");if(backdrop){backdrop.hidden=false;requestAnimationFrame(()=>backdrop.classList.add("show"));}document.body.classList.add("sidebar-open");}
-function closeSidebar(){sidebar?.classList.remove("open");if(backdrop){backdrop.classList.remove("show");setTimeout(()=>{if(!sidebar?.classList.contains("open"))backdrop.hidden=true;},180);}document.body.classList.remove("sidebar-open");}
-menuButton?.addEventListener("click",openSidebar);
+function openSidebar(){document.body.classList.add("sidebar-open");sidebar?.classList.add("open");backdrop?.classList.add("show");menuButton?.setAttribute("aria-expanded","true");}
+function closeSidebar(){document.body.classList.remove("sidebar-open");sidebar?.classList.remove("open");backdrop?.classList.remove("show");menuButton?.setAttribute("aria-expanded","false");}
+menuButton?.addEventListener("click",e=>{e.preventDefault();e.stopPropagation();openSidebar();});
 sidebarClose?.addEventListener("click",closeSidebar);
 backdrop?.addEventListener("click",closeSidebar);
 navLinks.forEach(a=>a.addEventListener("click",()=>setTimeout(()=>renderRoute(a.dataset.route),0)));
