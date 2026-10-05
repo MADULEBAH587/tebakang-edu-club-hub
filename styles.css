@@ -152,3 +152,14 @@ footer{width:min(1180px,calc(100% - 34px));margin:0 auto;border-top:1px solid va
   .quick-public-grid a{min-height:90px;padding:12px}.quick-public-grid strong{font-size:9px}
   .view-heading h1{font-size:34px}
 }
+
+/* Sidebar mobile reliability patch */
+.mobile-right-actions{display:flex;align-items:center;gap:5px}.mobile-admin-entry{display:inline-flex;align-items:center;justify-content:center;padding:7px 8px;border:1px solid rgba(41,209,125,.3);border-radius:999px;background:rgba(41,209,125,.08);color:var(--green);font-size:7px;font-weight:900;letter-spacing:.09em}
+@media(max-width:860px){
+  .club-sidebar{visibility:visible;opacity:1;pointer-events:none;transform:translate3d(-105%,0,0)!important;will-change:transform}
+  .club-sidebar.open,.club-app.sidebar-open .club-sidebar{transform:translate3d(0,0,0)!important;pointer-events:auto!important}
+  .sidebar-backdrop{display:block!important;visibility:hidden;pointer-events:none;opacity:0!important}
+  .sidebar-backdrop.show,.club-app.sidebar-open .sidebar-backdrop{visibility:visible;pointer-events:auto;opacity:1!important}
+  .mobile-menu-button{position:relative;z-index:2;touch-action:manipulation}
+}
+@media(max-width:390px){.mobile-right-actions{gap:3px}.mobile-admin-entry{padding:6px 7px;font-size:6px}.mobile-live-badge{padding:5px 6px}}
