@@ -14,7 +14,7 @@ function renderRoute(route=currentRoute()){
   views.forEach(v=>v.classList.toggle("active",v.dataset.view===route));
   navLinks.forEach(a=>a.classList.toggle("active",a.dataset.route===route));
   closeSidebar();
-  window.scrollTo({top:0,behavior:"instant"});
+  window.scrollTo({top:0,behavior:"auto"});
 }
 function openSidebar(){sidebar?.classList.add("open");if(backdrop){backdrop.hidden=false;requestAnimationFrame(()=>backdrop.classList.add("show"));}document.body.classList.add("sidebar-open");}
 function closeSidebar(){sidebar?.classList.remove("open");if(backdrop){backdrop.classList.remove("show");setTimeout(()=>{if(!sidebar?.classList.contains("open"))backdrop.hidden=true;},180);}document.body.classList.remove("sidebar-open");}
