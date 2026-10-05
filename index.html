@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#07130f">
   <meta name="description" content="Tebakang Edu Club Hub — digital clubhouse for Tebakang Educator FC.">
   <title>Tebakang Edu Club Hub</title>
@@ -11,38 +11,85 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Oswald:wght@500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./styles.css">
 </head>
-<body>
+<body class="club-app">
   <div class="ambient" aria-hidden="true"><div class="orb orb-a"></div><div class="orb orb-b"></div><div class="grid"></div><div class="stadium-light left"></div><div class="stadium-light right"></div></div>
   <div id="goalOverlay" class="goal-overlay" hidden><img src="./assets/tebakang-edu-logo.webp" alt=""><span>GOAL!</span><strong id="goalOverlayName">TEBAKANG EDU</strong><small id="goalOverlayMinute"></small></div>
 
-  <div class="match-ticker" aria-label="Latest club update"><div class="ticker-track"><span><b>TEBAKANG EDU CLUB HUB</b> · SEASON 2026</span></div></div>
+  <div class="match-ticker"><div class="ticker-track"><span><b>TEBAKANG EDU CLUB HUB</b> · SEASON 2026</span></div></div>
 
-  <header class="topbar">
-    <a href="#home" class="brand"><img src="./assets/tebakang-edu-logo.webp" alt="Tebakang Educator FC crest"><div><strong>TEBAKANG EDU</strong><span>CLUB HUB</span></div></a>
-    <nav id="mainNav">
-      <a class="active" href="#home">Home</a><a href="#matches">Matches</a><a href="#squad">Squad</a><a href="#stats">Stats</a><a href="#media">Media</a>
-    </nav>
-    <div class="topbar-actions">
-      <a class="admin-entry" href="/admin/" aria-label="Open Club Hub Admin">ADMIN</a>
-      <button class="menu-button" id="menuButton" aria-label="Open menu" aria-expanded="false">☰</button>
+  <div id="sidebarBackdrop" class="sidebar-backdrop" hidden></div>
+  <aside id="clubSidebar" class="club-sidebar" aria-label="Club navigation">
+    <div class="sidebar-brand">
+      <img src="./assets/tebakang-edu-logo.webp" alt="Tebakang Educator FC">
+      <div><strong>TEBAKANG EDU</strong><span>CLUB HUB</span></div>
+      <button id="sidebarClose" class="sidebar-close" type="button" aria-label="Close menu">✕</button>
     </div>
+
+    <nav class="sidebar-nav" id="mainNav">
+      <a class="active" href="#home" data-route="home"><span class="nav-icon">⌂</span><span>Home</span></a>
+      <a href="#match-centre" data-route="match-centre"><span class="nav-icon">⚽</span><span>Match Centre</span></a>
+      <a href="#matches" data-route="matches"><span class="nav-icon">▤</span><span>Matches</span></a>
+      <a href="#squad" data-route="squad"><span class="nav-icon">👥</span><span>Squad</span></a>
+      <a href="#stats" data-route="stats"><span class="nav-icon">▥</span><span>Club Stats</span></a>
+      <a href="#h2h" data-route="h2h"><span class="nav-icon">⇄</span><span>H2H</span></a>
+      <a href="#media" data-route="media"><span class="nav-icon">▦</span><span>Gallery</span></a>
+    </nav>
+
+    <div class="sidebar-bottom">
+      <a class="sidebar-admin" href="/admin/"><span>⚙</span><div><strong>ADMIN</strong><small>Control Room</small></div></a>
+      <div class="sidebar-motto">Kalah biasa,<br><strong>menang luar biasa.</strong></div>
+    </div>
+  </aside>
+
+  <header class="mobile-clubbar">
+    <button id="menuButton" class="mobile-menu-button" type="button" aria-label="Open menu">☰</button>
+    <a href="#home" class="mobile-brand"><img src="./assets/tebakang-edu-logo.webp" alt=""><div><strong>TEBAKANG EDU</strong><span>CLUB HUB</span></div></a>
+    <span id="mobileLiveBadge" class="mobile-live-badge">CLUB</span>
   </header>
 
-  <main>
-    <section id="home" class="hero section reveal">
-      <div class="hero-copy">
-        <div class="eyebrow"><span class="live-dot"></span> DIGITAL CLUBHOUSE · <span id="heroSeason">2026</span></div>
-        <h1>TEBAKANG<br><span>EDU CLUB HUB</span></h1>
-        <p class="tagline">Kalah biasa, menang luar biasa.</p>
-        <p class="hero-note">Matchday, squad, live updates and club history — all in one home.</p>
-        <div class="hero-actions"><a class="button primary" href="#match-centre">Open Match Centre</a><a class="button ghost" href="#squad">Meet the Squad</a></div>
+  <main class="view-shell">
+    <section class="public-view active" data-view="home" id="home">
+      <div class="home-dashboard">
+        <div class="home-identity">
+          <div>
+            <div class="eyebrow"><span class="live-dot"></span>DIGITAL CLUBHOUSE · <span id="heroSeason">2026</span></div>
+            <h1>TEBAKANG<br><span>EDU CLUB HUB</span></h1>
+            <p>Kalah biasa, menang luar biasa.</p>
+          </div>
+          <img src="./assets/tebakang-edu-logo.webp" alt="Tebakang Educator FC">
+        </div>
+
+        <div class="home-grid">
+          <article class="home-result-card glass-card">
+            <div class="home-card-head"><span class="kicker" id="homeResultKicker">LATEST RESULT</span><span id="homeResultStatus" class="status-pill ft">TBA</span></div>
+            <div class="home-result-body">
+              <div class="home-team"><img src="./assets/tebakang-edu-logo.webp" alt=""><strong>TEDU</strong></div>
+              <div class="home-score"><strong id="homeLatestScore">—</strong><small id="homeLatestMeta">No completed match yet.</small></div>
+              <div class="home-team"><img id="homeLatestOpponentLogo" alt=""><strong id="homeLatestOpponent">TBA</strong></div>
+            </div>
+            <a class="dashboard-link" href="#match-centre">Open Match Centre →</a>
+          </article>
+
+          <article class="home-next-card glass-card">
+            <div><span class="kicker">NEXT MATCH</span><h2 id="nextMatchTitle">Ready for the next one.</h2><p id="nextMatchMeta">Perlawanan seterusnya belum diumumkan.</p></div>
+            <div class="home-next-bottom"><div id="nextMatchCountdown" class="countdown">TBA</div><div class="next-opponent"><img id="nextOpponentLogo" alt=""><span id="nextOpponentCode">TBA</span></div></div>
+          </article>
+        </div>
+
+        <div class="home-lower">
+          <div class="form-panel glass-card"><div><span class="kicker">RECENT FORM</span><small>LAST 5 COMPLETED MATCHES</small></div><div id="recentForm" class="recent-form"></div></div>
+          <div class="quick-public-grid">
+            <a href="#matches"><span>▤</span><strong>Fixtures & Results</strong><small>All matches</small></a>
+            <a href="#squad"><span>👥</span><strong>Squad</strong><small>Meet the players</small></a>
+            <a href="#media"><span>▦</span><strong>Gallery</strong><small>Club moments</small></a>
+            <a href="#stats"><span>▥</span><strong>Club Stats</strong><small>Season overview</small></a>
+          </div>
+        </div>
       </div>
-      <div class="hero-crest-wrap" aria-hidden="true"><div class="crest-halo"></div><img class="hero-crest" src="./assets/tebakang-edu-logo.webp" alt=""><div class="floating-label label-a">TEBAKANG EDUCATOR FC</div><div class="floating-label label-b">TEBAKANG PEDULI</div></div>
-      <div class="scroll-cue">SCROLL <span>↓</span></div>
     </section>
 
-    <section class="section compact reveal">
-      <div class="section-heading"><div><span class="kicker">MATCHDAY</span><h2 id="matchHeading">Match Centre</h2></div><span id="mainStatusBadge" class="status-pill ft">TBA</span></div>
+    <section class="public-view" data-view="match-centre" id="match-centre-view">
+      <div class="view-heading"><div><span class="kicker">MATCHDAY</span><h1 id="matchHeading">Match Centre</h1></div><span id="mainStatusBadge" class="status-pill ft">TBA</span></div>
       <article id="match-centre" class="scoreboard glass-card">
         <div class="score-topline"><span id="matchTypeTop">NO MATCH</span><span id="matchDateTop">TBA</span></div>
         <div class="score-main">
@@ -60,61 +107,37 @@
       </article>
     </section>
 
-    <section class="section compact reveal">
-      <div class="next-match glass-card">
-        <div><span class="kicker">NEXT MATCH</span><h2 id="nextMatchTitle">Ready for the next one.</h2><p id="nextMatchMeta">Opponent, date and venue will appear here.</p><div id="nextMatchCountdown" class="countdown">TBA</div></div>
-        <div class="next-opponent"><img id="nextOpponentLogo" alt="Next opponent"><span id="nextOpponentCode">TBA</span></div>
-      </div>
-      <div id="recentForm" class="recent-form"></div>
-    </section>
-
-    <section id="matches" class="section reveal public-section">
-      <div class="section-heading"><div><span class="kicker">FIXTURES & RESULTS</span><h2>Match Archive</h2></div><select id="seasonFilter" class="public-select"><option value="ALL">All seasons</option></select></div>
+    <section class="public-view public-section" data-view="matches" id="matches">
+      <div class="view-heading"><div><span class="kicker">FIXTURES & RESULTS</span><h1>Match Archive</h1></div><select id="seasonFilter" class="public-select"><option value="ALL">All seasons</option></select></div>
       <div id="matchList" class="match-list"><div class="empty-state">Loading match archive…</div></div>
     </section>
 
-    <section id="h2h" class="section reveal public-section">
-      <div class="section-heading"><div><span class="kicker">HEAD TO HEAD</span><h2>Opponent Records</h2></div><span class="season-chip">ALL TIME</span></div>
-      <div id="h2hGrid" class="h2h-grid"></div>
-    </section>
-
-    <section id="squad" class="section reveal public-section">
-      <div class="section-heading"><div><span class="kicker">THE SQUAD</span><h2>Players</h2></div><span id="squadSeason" class="season-chip">2026</span></div>
+    <section class="public-view public-section" data-view="squad" id="squad">
+      <div class="view-heading"><div><span class="kicker">THE SQUAD</span><h1>Players</h1></div><span id="squadSeason" class="season-chip">2026</span></div>
       <div id="playerGrid" class="players"></div>
     </section>
 
-    <section id="stats" class="section reveal public-section">
-      <div class="section-heading"><div><span class="kicker">CLUB SNAPSHOT</span><h2>Season Overview</h2></div><span id="statsSeason" class="season-chip">2026</span></div>
-      <div id="clubStatGrid" class="stat-grid"></div>
-      <div id="playerSpotlight" class="spotlight glass-card"></div>
+    <section class="public-view public-section" data-view="stats" id="stats">
+      <div class="view-heading"><div><span class="kicker">CLUB SNAPSHOT</span><h1>Season Overview</h1></div><span id="statsSeason" class="season-chip">2026</span></div>
+      <div id="clubStatGrid" class="stat-grid"></div><div id="playerSpotlight" class="spotlight glass-card"></div>
     </section>
 
-    <section id="media" class="section reveal public-section">
-      <div class="section-heading"><div><span class="kicker">CLUB MEDIA</span><h2>Gallery</h2></div><span class="season-chip">MOMENTS</span></div>
+    <section class="public-view public-section" data-view="h2h" id="h2h">
+      <div class="view-heading"><div><span class="kicker">HEAD TO HEAD</span><h1>Opponent Records</h1></div><span class="season-chip">ALL TIME</span></div>
+      <div id="h2hGrid" class="h2h-grid"></div>
+    </section>
+
+    <section class="public-view public-section" data-view="media" id="media">
+      <div class="view-heading"><div><span class="kicker">CLUB MEDIA</span><h1>Gallery</h1></div><span class="season-chip">MOMENTS</span></div>
       <div id="albumGrid" class="album-grid"></div><div id="legacyMediaGrid" class="media-grid"></div>
     </section>
+
+    <footer class="dashboard-footer"><img src="./assets/tebakang-edu-logo.webp" alt=""><div><strong>TEBAKANG EDU CLUB HUB</strong><span>Kalah biasa, menang luar biasa.</span></div><small>v2 · Realtime Firebase</small></footer>
   </main>
 
-
-  <dialog id="playerModal" class="player-modal">
-    <button id="closePlayerModal" class="modal-close" type="button">✕</button>
-    <div id="playerModalContent"></div>
-  </dialog>
-
-  <dialog id="galleryModal" class="gallery-modal">
-    <button id="closeGalleryModal" class="modal-close" type="button">✕</button>
-    <div class="gallery-modal-head"><span class="kicker">CLUB GALLERY</span><h2 id="galleryModalTitle">Album</h2><small id="galleryModalMeta"></small></div>
-    <div id="galleryPhotoGrid" class="gallery-photo-grid"></div>
-  </dialog>
-  <dialog id="photoViewer" class="photo-viewer">
-    <button id="closePhotoViewer" class="viewer-close" type="button">✕</button>
-    <button id="prevPhoto" class="viewer-nav prev" type="button">‹</button>
-    <img id="viewerImage" alt="Club gallery photo">
-    <button id="nextPhoto" class="viewer-nav next" type="button">›</button>
-    <div id="viewerCaption" class="viewer-caption"></div>
-  </dialog>
-
-  <footer><img src="./assets/tebakang-edu-logo.webp" alt="Tebakang Educator FC"><div><strong>TEBAKANG EDU CLUB HUB</strong><span>Kalah biasa, menang luar biasa.</span></div><small>v2 · Realtime Firebase</small></footer>
+  <dialog id="playerModal" class="player-modal"><button id="closePlayerModal" class="modal-close" type="button">✕</button><div id="playerModalContent"></div></dialog>
+  <dialog id="galleryModal" class="gallery-modal"><button id="closeGalleryModal" class="modal-close" type="button">✕</button><div class="gallery-modal-head"><span class="kicker">CLUB GALLERY</span><h2 id="galleryModalTitle">Album</h2><small id="galleryModalMeta"></small></div><div id="galleryPhotoGrid" class="gallery-photo-grid"></div></dialog>
+  <dialog id="photoViewer" class="photo-viewer"><button id="closePhotoViewer" class="viewer-close" type="button">✕</button><button id="prevPhoto" class="viewer-nav prev" type="button">‹</button><img id="viewerImage" alt="Club gallery photo"><button id="nextPhoto" class="viewer-nav next" type="button">›</button><div id="viewerCaption" class="viewer-caption"></div></dialog>
 
   <script src="./app.js"></script>
   <script type="module" src="./firebase-public.js"></script>
