@@ -63,17 +63,20 @@ $("#adminSeasonFilter").onchange=renderMatches;$("#adminStatusFilter").onchange=
 function fillSeasons(){const el=$("#adminSeasonFilter"),old=el.value||"ALL",ss=[...new Set(matches.map(m=>String(m.season||"")).filter(Boolean))].sort().reverse();el.innerHTML='<option value="ALL">All seasons</option>'+ss.map(s=>'<option value="'+esc(s)+'">'+esc(s)+'</option>').join("");el.value=ss.includes(old)?old:"ALL";}
 
 function openMatchManager(id){
-  const m=matches.find(x=>x.id===id);if(!m)return toast("This match no longer exists.","error");
-  selectedMatchId=id;const formation=m.formation||"4-2-3-1";
-  lineupBench=[...(m.substitutes||[])];lineupCaptainId=m.captainId||"";lineupIsPublished=m.lineupPublished!==false;
-  const local=loadLocalLineupDraft(id);
-  if(local){
-    lineupSlots=local.lineupSlots||{};lineupBench=local.lineupBench||[];lineupCaptainId=local.captainId||"";lineupIsPublished=false;
-    m._localFormation=local.formation||formation;
-  }else lineupSlots=hydrateLineupSlots(m,formation);
-  lineupXI=slotPlayerIds(lineupSlots,m._localFormation||formation);
-  switchMatchTab("info");refreshManager();$("#matchManager").showModal();
-  if(local)toast("Unsaved lineup draft restored.","ok");
+  try{
+    const m=matches.find(x=>x.id===id);if(!m)return toast("This match no longer exists.","error");
+    selectedMatchId=id;const formation=m.formation||"4-2-3-1";
+    lineupBench=Array.isArray(m.substitutes)?[...m.substitutes]:[];lineupCaptainId=m.captainId||"";lineupIsPublished=m.lineupPublished!==false;
+    const local=loadLocalLineupDraft(id);
+    if(local){
+      lineupSlots=local.lineupSlots&&typeof local.lineupSlots==="object"?local.lineupSlots:{};
+      lineupBench=Array.isArray(local.lineupBench)?local.lineupBench:[];
+      lineupCaptainId=local.captainId||"";lineupIsPublished=false;m._localFormation=local.formation||formation;
+    }else lineupSlots=hydrateLineupSlots(m,formation);
+    lineupXI=slotPlayerIds(lineupSlots,m._localFormation||formation);
+    switchMatchTab("info");refreshManager();safeShowDialog("matchManager");
+    if(local)toast("Unsaved lineup draft restored.","ok");
+  }catch(err){console.error("openMatchManager",err);toast("Could not open this match. Please refresh and try again.","error");}
 }
 $("#closeMatchManager").onclick=()=>{$("#matchManager").close();selectedMatchId="";lineupXI=[];lineupBench=[];lineupSlots={};lineupCaptainId="";lineupPickerTarget="";};
 $$$("[data-match-tab]").forEach(b=>b.onclick=()=>switchMatchTab(b.dataset.matchTab));
@@ -238,13 +241,15 @@ function renderPlayers(){
   el.querySelectorAll("[data-edit-player]").forEach(b=>b.onclick=()=>openPlayerEditor(b.dataset.editPlayer));
 }
 function openPlayerEditor(id){
-  const p=players.find(x=>x.id===id);
-  $("#playerForm").reset();$("#playerId").value=p?.id||"";$("#playerDialogTitle").textContent=p?"Edit Player":"Add Player";
-  $("#playerName").value=p?.name||"";$("#playerPosition").value=p?.position||"";$("#playerNumber").value=p?.number||"";$("#playerType").value=playerTypeOf(p);$("#playerActive").value=String(p?.active!==false);
-  $("#playerPhotoPosition").value=String(p?.photoPositionY??20);editingPlayerPhoto=p?.photoData||"";pendingPlayerPhoto="";pendingPlayerOriginalPhoto="";pendingPlayerCutoutPhoto="";playerPhotoChoice=p?.photoMode||"original";
-  preview("#playerPhotoPreview",editingPlayerPhoto);$("#playerPhotoPreview").style.objectPosition="center "+$("#playerPhotoPosition").value+"%";$("#playerPhotoPlaceholder").style.display=editingPlayerPhoto?"none":"block";
-  $("#cutoutChoice").hidden=true;$("#cutoutBadge").textContent=playerPhotoChoice==="cutout"?"CUTOUT READY":"AUTO CUTOUT";msg("#cutoutStatus",editingPlayerPhoto?(playerPhotoChoice==="cutout"?"Transparent player cutout saved.":"Current player photo loaded."):"Upload a player photo. Background removal runs on this device.");
-  msg("#playerMessage","");$("#playerDialog").showModal();
+  try{
+    const p=players.find(x=>x.id===id);
+    $("#playerForm").reset();$("#playerId").value=p?.id||"";$("#playerDialogTitle").textContent=p?"Edit Player":"Add Player";
+    $("#playerName").value=p?.name||"";$("#playerPosition").value=p?.position||"";$("#playerNumber").value=p?.number||"";$("#playerType").value=playerTypeOf(p);$("#playerActive").value=String(p?.active!==false);
+    $("#playerPhotoPosition").value=String(p?.photoPositionY??20);editingPlayerPhoto=p?.photoData||"";pendingPlayerPhoto="";pendingPlayerOriginalPhoto="";pendingPlayerCutoutPhoto="";playerPhotoChoice=p?.photoMode||"original";
+    preview("#playerPhotoPreview",editingPlayerPhoto);$("#playerPhotoPreview").style.objectPosition="center "+$("#playerPhotoPosition").value+"%";$("#playerPhotoPlaceholder").style.display=editingPlayerPhoto?"none":"block";
+    $("#cutoutChoice").hidden=true;$("#cutoutBadge").textContent=playerPhotoChoice==="cutout"?"CUTOUT READY":"AUTO CUTOUT";msg("#cutoutStatus",editingPlayerPhoto?(playerPhotoChoice==="cutout"?"Transparent player cutout saved.":"Current player photo loaded."):"Upload a player photo. Background removal runs on this device.");
+    msg("#playerMessage","");safeShowDialog("playerDialog");
+  }catch(err){console.error("openPlayerEditor",err);toast("Could not open this player. Please refresh and try again.","error");}
 }
 $("#playerPhotoPosition").oninput=()=>{$("#playerPhotoPreview").style.objectPosition="center "+$("#playerPhotoPosition").value+"%";};
 $("#useCutoutBtn").onclick=()=>setPlayerPhotoChoice("cutout");
