@@ -34,19 +34,38 @@ function renderVisibility(){
   $("#matches")?.classList.toggle("public-hidden",settings.showArchive===false);
 }
 function renderHomeSummary(){
-  const live=matches.find(m=>["LIVE","HT","MATCHDAY"].includes(m.status)),latest=matches.find(m=>m.status==="FT"),now=Date.now(),upcoming=[...matches].filter(m=>!["FT","LIVE","HT"].includes(m.status)&&ms(m.kickoff)>=now).sort((a,b)=>ms(a.kickoff)-ms(b.kickoff))[0],m=live||latest||upcoming;
-  const badge=$("#mobileLiveBadge");
+  const now=Date.now(),live=matches.find(m=>["LIVE","HT","MATCHDAY"].includes(m.status)),latest=matches.find(m=>m.status==="FT"),upcoming=[...matches].filter(m=>!["FT","LIVE","HT"].includes(m.status)&&ms(m.kickoff)>=now).sort((a,b)=>ms(a.kickoff)-ms(b.kickoff))[0];
+  const recentPost=latest&&Math.abs(now-ms(latest.kickoff))<=18*60*60*1000,mode=live?"live":recentPost?"post":"normal",m=live||latest||upcoming;
+  const home=$("#home"),badge=$("#mobileLiveBadge");
+  if(home){home.classList.remove("home-mode-normal","home-mode-live","home-mode-post");home.classList.add("home-mode-"+mode);}
   if(badge){badge.textContent=live?(live.status==="HT"?"HT":"LIVE"):"CLUB";badge.classList.toggle("live",!!live);}
+  setText("#homeModeLabel",mode==="live"?(live?.status==="MATCHDAY"?"MATCHDAY":"LIVE MATCH"):mode==="post"?"POST-MATCH":"CLUB MODE");
+  setText("#homeModeNote",mode==="live"?(live?.opponent?"vs "+live.opponent:"Match in progress"):mode==="post"?"Latest full-time update":"Latest club update");
+  setText("#homeMatchAction",mode==="live"?"Open Live Match":mode==="post"?"View Full Match":"Open Match Centre");
+  setText("#homeMatchPulseText",mode==="live"?"LIVE · REALTIME":mode==="post"?"FULL TIME · UPDATED":"REALTIME CLUB DATA");
+
+  const season=currentSeason(),done=matches.filter(x=>x.status==="FT"&&String(x.season||"")===String(season)),wins=done.filter(x=>Number(x.homeScore)>Number(x.awayScore)).length,goals=done.reduce((n,x)=>n+Number(x.homeScore||0),0),squad=players.filter(p=>p.active!==false).length;
+  setText("#homePulseSeason",season);animateHomeStat("#homePulseMatches",done.length);animateHomeStat("#homePulseWins",wins);animateHomeStat("#homePulseGoals",goals);animateHomeStat("#homePulseSquad",squad);
+
   if(!m){
     setText("#homeResultKicker","LATEST RESULT");setText("#homeResultStatus","TBA");setText("#homeLatestScore","—");setText("#homeLatestOpponent","TBA");setText("#homeLatestMeta","No match recorded yet.");$("#homeLatestOpponentLogo")?.removeAttribute("src");return;
   }
   const isLive=["LIVE","HT","MATCHDAY"].includes(m.status),isDone=m.status==="FT";
-  setText("#homeResultKicker",isLive?"LIVE MATCH":isDone?"LATEST RESULT":"NEXT MATCH");
+  setText("#homeResultKicker",isLive?(m.status==="MATCHDAY"?"MATCHDAY":"LIVE MATCH"):isDone?"LATEST RESULT":"NEXT MATCH");
   setText("#homeResultStatus",statusText(m.status));
   setText("#homeLatestScore",isDone||isLive?String(m.homeScore??0)+"–"+String(m.awayScore??0):"VS");
   setText("#homeLatestOpponent",(m.opponentCode||m.opponent||"OPP").toUpperCase());
   setText("#homeLatestMeta",fullDate(m.kickoff)+" · "+(m.venue||"Venue TBA"));
   const logo=$("#homeLatestOpponentLogo");if(logo){if(m.opponentLogo)logo.src=m.opponentLogo;else logo.removeAttribute("src");}
+}
+function animateHomeStat(sel,target){
+  const el=$(sel);if(!el)return;target=Number(target)||0;
+  const previous=Number(el.dataset.renderedTarget??-1);el.dataset.count=String(target);el.dataset.renderedTarget=String(target);
+  if(previous===target&&el.textContent!=="")return;
+  if(window.matchMedia?.("(prefers-reduced-motion: reduce)").matches){el.textContent=String(target);return;}
+  const start=performance.now(),duration=650,from=0;
+  const tick=t=>{const p=Math.min(1,(t-start)/duration),ease=1-Math.pow(1-p,3);el.textContent=String(Math.round(from+(target-from)*ease));if(p<1)requestAnimationFrame(tick);};
+  requestAnimationFrame(tick);
 }
 function currentSeason(){return String(settings.currentSeason||matches.map(m=>String(m.season||"")).filter(Boolean).sort().reverse()[0]||"2026");}
 function activeMatch(){const chosen=matches.find(m=>m.id===selectedPublicMatchId);if(chosen)return chosen;const live=matches.find(m=>["LIVE","HT","MATCHDAY"].includes(m.status));if(live)return live;const ft=matches.find(m=>m.status==="FT");if(ft)return ft;const now=Date.now();return [...matches].filter(m=>ms(m.kickoff)>=now).sort((a,b)=>ms(a.kickoff)-ms(b.kickoff))[0]||matches[0];}
@@ -94,7 +113,7 @@ function renderNext(){
 function tickCountdown(){if(!nextKickoff)return;const diff=nextKickoff-Date.now();if(diff<=0){setText("#nextMatchCountdown","MATCHDAY");return;}const d=Math.floor(diff/86400000),h=Math.floor(diff%86400000/3600000),m=Math.floor(diff%3600000/60000);setText("#nextMatchCountdown",d+"D : "+String(h).padStart(2,"0")+"H : "+String(m).padStart(2,"0")+"M");}
 setInterval(tickCountdown,30000);
 
-function renderForm(){const ft=matches.filter(m=>m.status==="FT").slice(0,5),el=$("#recentForm");if(el)el.innerHTML=ft.map(m=>{const r=(m.homeScore??0)>(m.awayScore??0)?"W":(m.homeScore??0)===(m.awayScore??0)?"D":"L";return '<span class="form-dot '+r.toLowerCase()+'" title="'+esc(m.opponent||"Opponent")+'">'+r+'</span>';}).join("");}
+function renderForm(){const ft=matches.filter(m=>m.status==="FT").slice(0,5),el=$("#recentForm");if(el)el.innerHTML=ft.map((m,i)=>{const r=(m.homeScore??0)>(m.awayScore??0)?"W":(m.homeScore??0)===(m.awayScore??0)?"D":"L";return '<span class="form-dot '+r.toLowerCase()+'" style="--form-i:'+i+'" title="'+esc(m.opponent||"Opponent")+'">'+r+'</span>';}).join("");}
 function renderSeasons(){const el=$("#seasonFilter");if(!el)return;const old=seasonFilter,ss=[...new Set(matches.map(m=>String(m.season||"")).filter(Boolean))].sort().reverse();el.innerHTML='<option value="ALL">All seasons</option>'+ss.map(s=>'<option value="'+esc(s)+'">'+esc(s)+'</option>').join("");el.value=ss.includes(old)?old:"ALL";}
 function renderArchive(){
   const el=$("#matchList");if(!el)return;const list=matches.filter(m=>seasonFilter==="ALL"||String(m.season)===seasonFilter);
