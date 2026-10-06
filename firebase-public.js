@@ -3,7 +3,7 @@ import { getFirestore, collection, onSnapshot, query, orderBy, limit, doc } from
 import { firebaseConfig } from "./firebase-config.js";
 
 const app=initializeApp(firebaseConfig),db=getFirestore(app),$=s=>document.querySelector(s);
-let matches=[],players=[],events=[],media=[],albums=[],settings={},seasonFilter="ALL",nextKickoff=0,scoreMemory=new Map(),goalTimer=null,selectedPublicMatchId="",viewerPhotos=[],viewerIndex=0,viewerStartX=0;
+let matches=[],players=[],events=[],media=[],albums=[],settings={},seasonFilter="ALL",nextKickoff=0,scoreMemory=new Map(),goalTimer=null,selectedPublicMatchId=new URLSearchParams(location.search).get("match")||"",viewerPhotos=[],viewerIndex=0,viewerStartX=0;
 
 onSnapshot(collection(db,"matches"),snap=>{
   const fresh=snap.docs.map(d=>({id:d.id,...d.data()})).filter(m=>m.publicVisible!==false).sort((a,b)=>ms(b.kickoff)-ms(a.kickoff));
@@ -95,13 +95,54 @@ function renderMainMatch(){
 }
 function renderTimeline(m){const el=$("#publicTimeline"),list=events.filter(e=>e.matchId===m.id).sort((a,b)=>(a.minute??999)-(b.minute??999)||stamp(a)-stamp(b));el.innerHTML=list.length?list.map(e=>'<div class="public-event"><div class="minute">'+(e.minute?e.minute+"'":"—")+'</div><div class="etype">'+icon(e.type)+' '+esc(e.type||"EVENT")+'</div><div><strong>'+esc(eventDesc(e))+'</strong><small>'+esc(e.note||"")+'</small></div></div>').join(""):'<p class="empty-state">Tiada event direkodkan.</p>';}
 function clearPitch(){const pitch=$("#publicPitch");if(!pitch)return;pitch.querySelectorAll(".pitch-player,.p").forEach(x=>x.remove());pitch.insertAdjacentHTML("beforeend",'<span class="p p-am">LINEUP TBA</span>');}
+const PUBLIC_FORMATIONS={
+  "4-2-3-1":[["GK",8,50],["LB",30,14],["LCB",30,38],["RCB",30,62],["RB",30,86],["LDM",50,35],["RDM",50,65],["LW",70,16],["CAM",70,50],["RW",70,84],["ST",88,50]],
+  "4-3-3":[["GK",8,50],["LB",30,14],["LCB",30,38],["RCB",30,62],["RB",30,86],["LCM",55,24],["CM",55,50],["RCM",55,76],["LW",82,18],["ST",88,50],["RW",82,82]],
+  "4-4-2":[["GK",8,50],["LB",30,14],["LCB",30,38],["RCB",30,62],["RB",30,86],["LM",56,14],["LCM",56,38],["RCM",56,62],["RM",56,86],["LST",86,36],["RST",86,64]],
+  "3-5-2":[["GK",8,50],["LCB",31,24],["CB",31,50],["RCB",31,76],["LWB",57,9],["LCM",57,30],["CAM",57,50],["RCM",57,70],["RWB",57,91],["LST",86,36],["RST",86,64]],
+  "Custom":[["P1",8,50],["P2",30,14],["P3",30,38],["P4",30,62],["P5",30,86],["P6",55,22],["P7",55,50],["P8",55,78],["P9",83,18],["P10",88,50],["P11",83,82]]
+};
+function publicFormationSpec(f){return(PUBLIC_FORMATIONS[f]||PUBLIC_FORMATIONS["4-2-3-1"]).map(([key,x,y])=>({key,x,y}));}
 function renderLineup(m){
-  const pitch=$("#publicPitch"),bench=$("#publicBench");pitch.querySelectorAll(".pitch-player,.p").forEach(x=>x.remove());
-  const starters=(m.starters||[]).map(id=>players.find(p=>p.id===id)).filter(Boolean),groups={gk:[],def:[],mid:[],att:[]};
-  starters.forEach(p=>groups[group(p.position)].push(p));placeGroup(groups.gk,8,pitch);placeGroup(groups.def,31,pitch);placeGroup(groups.mid,56,pitch);placeGroup(groups.att,82,pitch);
-  if(!starters.length)pitch.insertAdjacentHTML("beforeend",'<span class="p p-am">LINEUP TBA</span>');
-  const subs=(m.substitutes||[]).map(id=>players.find(p=>p.id===id)).filter(Boolean);bench.innerHTML=subs.length?'<span class="kicker">BENCH</span> '+subs.map(p=>'<span class="bench-chip">#'+esc(p.number||"—")+' '+esc(p.name)+'</span>').join(""):"";
+  const pitch=$("#publicPitch"),bench=$("#publicBench"),listEl=$("#publicLineupList");if(!pitch||!bench)return;
+  pitch.querySelectorAll(".pitch-player,.p,.public-lineup-player").forEach(x=>x.remove());
+  setText("#publicFormation",(m.formation||"FORMATION TBA").toUpperCase());
+  pitch.dataset.formation=m.formation||"";
+  if(m.lineupPublished===false){
+    pitch.insertAdjacentHTML("beforeend",'<span class="p p-am">LINEUP NOT PUBLISHED</span>');bench.innerHTML="";if(listEl)listEl.innerHTML='<p class="empty-state">Lineup is still in draft.</p>';return;
+  }
+  const formation=m.formation||"4-2-3-1",spec=publicFormationSpec(formation),slots=m.lineupSlots&&typeof m.lineupSlots==="object"?m.lineupSlots:null;
+  if(slots&&Object.values(slots).some(Boolean)){
+    const ordered=[];
+    spec.forEach((slot,i)=>{
+      const id=slots[slot.key],p=players.find(x=>x.id===id);if(!p)return;ordered.push({slot,p});
+      const d=document.createElement("button");d.type="button";d.className="public-lineup-player";d.style.left=slot.x+"%";d.style.top=slot.y+"%";d.style.setProperty("--player-i",i);
+      const photo=p.photoData?'<img style="object-position:center '+Number(p.photoPositionY??20)+'%" src="'+p.photoData+'" alt="'+esc(p.name)+'">':'<span class="public-player-no">'+esc(p.number||"—")+'</span>';
+      const marks=publicPlayerMarks(m,p);
+      d.innerHTML='<span class="public-player-role">'+esc(slot.key)+'</span><span class="public-player-marker">'+photo+(m.captainId===p.id?'<i class="public-captain">C</i>':'')+'</span><strong>'+esc(p.name)+'</strong>'+marks;
+      d.onclick=()=>openPlayer(p.id);pitch.appendChild(d);
+    });
+    if(listEl)listEl.innerHTML=ordered.length?ordered.map(({slot,p})=>'<button type="button" data-list-player="'+p.id+'"><span>'+esc(slot.key)+'</span><b>#'+esc(p.number||"—")+' '+esc(p.name)+'</b>'+(m.captainId===p.id?'<i>C</i>':'')+'</button>').join(""):'<p class="empty-state">Lineup TBA.</p>';
+    listEl?.querySelectorAll("[data-list-player]").forEach(b=>b.onclick=()=>openPlayer(b.dataset.listPlayer));
+  }else{
+    const starters=(m.starters||[]).map(id=>players.find(p=>p.id===id)).filter(Boolean),groups={gk:[],def:[],mid:[],att:[]};
+    starters.forEach(p=>groups[group(p.position)].push(p));placeGroup(groups.gk,8,pitch);placeGroup(groups.def,31,pitch);placeGroup(groups.mid,56,pitch);placeGroup(groups.att,82,pitch);
+    if(!starters.length)pitch.insertAdjacentHTML("beforeend",'<span class="p p-am">LINEUP TBA</span>');
+    if(listEl)listEl.innerHTML=starters.map(p=>'<button type="button" data-list-player="'+p.id+'"><span>'+esc(p.position||"—")+'</span><b>#'+esc(p.number||"—")+' '+esc(p.name)+'</b></button>').join("")||'<p class="empty-state">Lineup TBA.</p>';
+    listEl?.querySelectorAll("[data-list-player]").forEach(b=>b.onclick=()=>openPlayer(b.dataset.listPlayer));
+  }
+  const subs=(m.substitutes||[]).map(id=>players.find(p=>p.id===id)).filter(Boolean);
+  bench.innerHTML=subs.length?'<span class="kicker">BENCH</span><div class="public-bench-scroll">'+subs.map(p=>'<button type="button" data-bench-player="'+p.id+'" class="bench-chip">#'+esc(p.number||"—")+' '+esc(p.name)+'</button>').join("")+'</div>':"";
+  bench.querySelectorAll("[data-bench-player]").forEach(b=>b.onclick=()=>openPlayer(b.dataset.benchPlayer));
 }
+function publicPlayerMarks(m,p){
+  const es=events.filter(e=>e.matchId===m.id&&e.team==="home"&&e.playerId===p.id),goals=es.filter(e=>e.type==="GOAL").length,yellow=es.some(e=>e.type==="YELLOW"),red=es.some(e=>e.type==="RED");
+  return '<span class="public-player-events">'+(goals?'<i>⚽'+(goals>1?"×"+goals:"")+'</i>':"")+(yellow?'<i>🟨</i>':"")+(red?'<i>🟥</i>':"")+'</span>';
+}
+$("[data-lineup-view]").forEach(b=>b.addEventListener("click",()=>{
+  $("[data-lineup-view]").forEach(x=>x.classList.toggle("active",x===b));
+  const list=b.dataset.lineupView==="list";$("#publicPitch").hidden=list;$("#publicLineupList").hidden=!list;
+}));
 function placeGroup(list,x,pitch){const n=list.length;if(!n)return;list.forEach((p,i)=>{const y=n===1?50:15+(70*i/(n-1)),d=document.createElement("div");d.className="pitch-player";d.style.left=x+"%";d.style.top=y+"%";d.innerHTML='<div class="dot">'+esc(p.number||p.position||"P")+'</div><span>'+esc(p.name)+'</span>';pitch.appendChild(d);});}
 function group(pos=""){pos=pos.toUpperCase();if(pos.includes("GK"))return"gk";if(/CB|LB|RB|DF|WB/.test(pos))return"def";if(/DM|CM|AM|MF/.test(pos))return"mid";return"att";}
 
