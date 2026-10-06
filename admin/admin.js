@@ -50,7 +50,7 @@ function openMatchManager(id){
     lineupSlots=local.lineupSlots||{};lineupBench=local.lineupBench||[];lineupCaptainId=local.captainId||"";lineupIsPublished=false;
     m._localFormation=local.formation||formation;
   }else lineupSlots=hydrateLineupSlots(m,formation);
-  lineupXI=slotPlayerIds(lineupSlots);
+  lineupXI=slotPlayerIds(lineupSlots,m._localFormation||formation);
   switchMatchTab("info");refreshManager();$("#matchManager").showModal();
   if(local)toast("Unsaved lineup draft restored.","ok");
 }
@@ -75,7 +75,7 @@ const FORMATIONS={
   "Custom":[["P1",8,50],["P2",30,14],["P3",30,38],["P4",30,62],["P5",30,86],["P6",55,22],["P7",55,50],["P8",55,78],["P9",83,18],["P10",88,50],["P11",83,82]]
 };
 function formationSpec(f=$("#editFormation")?.value||"4-2-3-1"){return(FORMATIONS[f]||FORMATIONS["4-2-3-1"]).map(([key,x,y])=>({key,x,y}));}
-function slotPlayerIds(slots=lineupSlots){return formationSpec().map(s=>slots[s.key]).filter(Boolean);}
+function slotPlayerIds(slots=lineupSlots,f=$("#editFormation")?.value||"4-2-3-1"){return formationSpec(f).map(s=>slots[s.key]).filter(Boolean);}
 function hydrateLineupSlots(m,formation){
   const spec=formationSpec(formation),saved=m.lineupSlots&&typeof m.lineupSlots==="object"?m.lineupSlots:null;
   if(saved&&Object.values(saved).some(Boolean)){const out={};spec.forEach(s=>{if(saved[s.key])out[s.key]=saved[s.key];});const missing=(m.starters||[]).filter(id=>!Object.values(out).includes(id));return assignPlayersToSlots(missing,spec,out);}
