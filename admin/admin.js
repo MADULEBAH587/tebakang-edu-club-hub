@@ -9,7 +9,7 @@ let pendingPlayerPhoto="",editingPlayerPhoto="",pendingPlayerOriginalPhoto="",pe
 
 $("#loginForm").addEventListener("submit",async e=>{e.preventDefault();const b=e.submitter;busy(b,true,"Signing in…");msg("#loginMessage","");try{await signInWithEmailAndPassword(auth,$("#email").value.trim(),$("#password").value);}catch(x){msg("#loginMessage",friendly(x),"error");}finally{busy(b,false,"Sign in");}});
 $("#logoutBtn").addEventListener("click",()=>signOut(auth));
-onAuthStateChanged(auth,u=>{$("#loginPanel").hidden=!!u;$("#dashboard").hidden=!u;$("#userEmail").textContent=u?.email||"—";$("#connectionBadge").textContent=u?"FIREBASE · AUTH":"FIREBASE";if(u)page("home");});
+onAuthStateChanged(auth,u=>{document.body.classList.toggle("admin-authenticated",!!u);$("#loginPanel").hidden=!!u;$("#dashboard").hidden=!u;$("#userEmail").textContent=u?.email||"—";$("#connectionBadge").textContent=u?"FIREBASE · AUTH":"FIREBASE";if(u)page("home");});
 
 const ADMIN_PAGE_META={
   home:["Home","Club overview and quick actions."],
@@ -25,11 +25,12 @@ function openAdminSidebar(){document.body.classList.add("admin-sidebar-open");ad
 function closeAdminSidebar(){document.body.classList.remove("admin-sidebar-open");adminSidebar?.classList.remove("open");adminSidebarBackdrop?.classList.remove("show");adminMenuButton?.setAttribute("aria-expanded","false");}
 function page(n){
   if(!ADMIN_PAGE_META[n])n="home";
-  $$("[data-page-panel]").forEach(p=>p.classList.toggle("active",p.dataset.pagePanel===n));
-  $$("#adminNav [data-page]").forEach(b=>b.classList.toggle("active",b.dataset.page===n));
+  $("[data-page-panel]").forEach(p=>{const active=p.dataset.pagePanel===n;p.classList.toggle("active",active);p.hidden=!active;});
+  $("#adminNav [data-page]").forEach(b=>b.classList.toggle("active",b.dataset.page===n));
   $("#pageTitle").textContent=ADMIN_PAGE_META[n][0];
   $("#pageSubtitle").textContent=ADMIN_PAGE_META[n][1];
-  closeAdminSidebar();window.scrollTo({top:0,behavior:"auto"});
+  closeAdminSidebar();
+  const main=$(".admin-main");if(main)main.scrollTo({top:0,behavior:"auto"});
 }
 $("#adminNav").addEventListener("click",e=>{const b=e.target.closest("[data-page]");if(b)page(b.dataset.page);});
 $$("[data-go]").forEach(b=>b.onclick=()=>page(b.dataset.go));
