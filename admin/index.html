@@ -86,30 +86,30 @@
             <section class="panel"><div class="panel-head"><div><span class="eyebrow">LATEST</span><h2>Recent matches</h2></div><button data-go="matches" class="secondary" type="button">View all</button></div><div id="overviewMatchList" class="match-card-list"></div></section>
           </section>
 
-          <section class="admin-page" data-page-panel="matches">
+          <section class="admin-page" data-page-panel="matches" hidden>
             <div class="page-actions"><div><span class="eyebrow">MATCHES</span><h2>Fixtures & Results</h2></div><button id="newMatchBtn" class="primary" type="button">+ Match</button></div>
             <div class="filter-bar"><select id="adminSeasonFilter"><option value="ALL">All seasons</option></select><select id="adminStatusFilter"><option value="ALL">All status</option><option>UPCOMING</option><option>MATCHDAY</option><option>LIVE</option><option>HT</option><option>FT</option></select></div>
             <div id="matchAdminList" class="match-card-list"></div>
           </section>
 
-          <section class="admin-page" data-page-panel="squad">
+          <section class="admin-page" data-page-panel="squad" hidden>
             <div class="page-actions"><div><span class="eyebrow">SQUAD</span><h2>Players</h2></div><button id="newPlayerBtn" class="primary" type="button">+ Player</button></div>
             <div class="segmented squad-segmented"><button class="active" data-squad-filter="active" type="button">Active</button><button data-squad-filter="original" type="button">Original</button><button data-squad-filter="import" type="button">Import</button><button data-squad-filter="inactive" type="button">Archived</button><button data-squad-filter="all" type="button">All</button></div>
             <div id="playerAdminList" class="squad-admin-grid"></div>
           </section>
 
-          <section class="admin-page" data-page-panel="opponents">
+          <section class="admin-page" data-page-panel="opponents" hidden>
             <div class="page-actions"><div><span class="eyebrow">OPPONENT DATABASE</span><h2>Opponents</h2></div><button id="newOpponentBtn" class="primary" type="button">+ Opponent</button></div>
             <div id="opponentAdminList" class="opponent-grid"></div>
           </section>
 
-          <section class="admin-page" data-page-panel="gallery">
+          <section class="admin-page" data-page-panel="gallery" hidden>
             <div class="page-actions"><div><span class="eyebrow">CLUB MEDIA</span><h2>Gallery Albums</h2></div><button id="newAlbumBtn" class="primary" type="button">+ Album</button></div>
             <p class="muted-copy">Create albums, link them to matches and upload compressed WebP photos.</p>
             <div id="albumAdminList" class="album-admin-grid"></div>
           </section>
 
-          <section class="admin-page" data-page-panel="settings">
+          <section class="admin-page" data-page-panel="settings" hidden>
             <div class="page-actions"><div><span class="eyebrow">PUBLIC EXPERIENCE</span><h2>Visibility & Season</h2></div></div>
             <section class="panel settings-page-panel">
               <form id="settingsForm" class="settings-grid">
@@ -124,7 +124,7 @@
             </section>
           </section>
 
-          <section class="admin-page" data-page-panel="backup">
+          <section class="admin-page" data-page-panel="backup" hidden>
             <div class="page-actions"><div><span class="eyebrow">BACKUP & SESSION</span><h2>Club Data</h2></div></div>
             <section class="panel backup-page-panel">
               <p class="muted-copy">Download matches, events, players, opponents, albums, photos and settings as JSON.</p>
