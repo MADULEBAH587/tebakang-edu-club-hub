@@ -5,7 +5,7 @@ import { firebaseConfig } from "../firebase-config.js";
 
 const app=initializeApp(firebaseConfig),db=getFirestore(app),auth=getAuth(app),$=s=>document.querySelector(s),$$=s=>Array.from(document.querySelectorAll(s));
 let matches=[],players=[],opponents=[],events=[],media=[],albums=[],settings={},selectedMatchId="",currentAlbumId="",squadFilter="active";
-let pendingPlayerPhoto="",editingPlayerPhoto="",pendingPlayerOriginalPhoto="",pendingPlayerCutoutPhoto="",playerPhotoChoice="original",bgRemovalModulePromise=null,pendingOpponentLogo="",editingOpponentLogo="",lineupXI=[],lineupBench=[];
+let pendingPlayerPhoto="",editingPlayerPhoto="",pendingPlayerOriginalPhoto="",pendingPlayerCutoutPhoto="",playerPhotoChoice="original",bgRemovalModulePromise=null,pendingOpponentLogo="",editingOpponentLogo="",lineupXI=[],lineupBench=[],lineupSlots={},lineupCaptainId="",lineupIsPublished=false,lineupPickerTarget="";
 
 $("#loginForm").addEventListener("submit",async e=>{e.preventDefault();const b=e.submitter;busy(b,true,"Signing in…");msg("#loginMessage","");try{await signInWithEmailAndPassword(auth,$("#email").value.trim(),$("#password").value);}catch(x){msg("#loginMessage",friendly(x),"error");}finally{busy(b,false,"Sign in");}});
 $("#logoutBtn").addEventListener("click",()=>signOut(auth));
@@ -41,12 +41,24 @@ function bindMatchCards(root){root.querySelectorAll("[data-manage]").forEach(b=>
 $("#adminSeasonFilter").onchange=renderMatches;$("#adminStatusFilter").onchange=renderMatches;
 function fillSeasons(){const el=$("#adminSeasonFilter"),old=el.value||"ALL",ss=[...new Set(matches.map(m=>String(m.season||"")).filter(Boolean))].sort().reverse();el.innerHTML='<option value="ALL">All seasons</option>'+ss.map(s=>'<option value="'+esc(s)+'">'+esc(s)+'</option>').join("");el.value=ss.includes(old)?old:"ALL";}
 
-function openMatchManager(id){const m=matches.find(x=>x.id===id);if(!m)return toast("This match no longer exists.","error");selectedMatchId=id;lineupXI=[...(m.starters||[])];lineupBench=[...(m.substitutes||[])];switchMatchTab("info");refreshManager();$("#matchManager").showModal();}
-$("#closeMatchManager").onclick=()=>{$("#matchManager").close();selectedMatchId="";lineupXI=[];lineupBench=[];};
-$$("[data-match-tab]").forEach(b=>b.onclick=()=>switchMatchTab(b.dataset.matchTab));
-function switchMatchTab(n){$$("[data-match-tab]").forEach(b=>b.classList.toggle("active",b.dataset.matchTab===n));$$("[data-match-panel]").forEach(p=>p.classList.toggle("active",p.dataset.matchPanel===n));if(n==="poster")generatePoster();}
+function openMatchManager(id){
+  const m=matches.find(x=>x.id===id);if(!m)return toast("This match no longer exists.","error");
+  selectedMatchId=id;const formation=m.formation||"4-2-3-1";
+  lineupBench=[...(m.substitutes||[])];lineupCaptainId=m.captainId||"";lineupIsPublished=m.lineupPublished!==false;
+  const local=loadLocalLineupDraft(id);
+  if(local){
+    lineupSlots=local.lineupSlots||{};lineupBench=local.lineupBench||[];lineupCaptainId=local.captainId||"";lineupIsPublished=false;
+    m._localFormation=local.formation||formation;
+  }else lineupSlots=hydrateLineupSlots(m,formation);
+  lineupXI=slotPlayerIds(lineupSlots);
+  switchMatchTab("info");refreshManager();$("#matchManager").showModal();
+  if(local)toast("Unsaved lineup draft restored.","ok");
+}
+$("#closeMatchManager").onclick=()=>{$("#matchManager").close();selectedMatchId="";lineupXI=[];lineupBench=[];lineupSlots={};lineupCaptainId="";lineupPickerTarget="";};
+$("[data-match-tab]").forEach(b=>b.onclick=()=>switchMatchTab(b.dataset.matchTab));
+function switchMatchTab(n){$("[data-match-tab]").forEach(b=>b.classList.toggle("active",b.dataset.matchTab===n));$("[data-match-panel]").forEach(p=>p.classList.toggle("active",p.dataset.matchPanel===n));if(n==="poster")generatePoster();}
 function refreshManager(){const m=matches.find(x=>x.id===selectedMatchId);if(!m)return;$("#managerTitle").textContent="TEDU vs "+(m.opponent||"Opponent");$("#managerMeta").textContent=date(m.kickoff)+" · "+(m.venue||"Venue TBA")+" · "+(m.matchType||"Friendly");$("#managerStatus").textContent=m.status||"UPCOMING";$("#managerVisibility").textContent=m.publicVisible===false?"HIDDEN":"PUBLIC";$("#managerVisibility").classList.toggle("hidden",m.publicVisible===false);fillMatchInfo(m);refreshLive(m);renderEvents();renderLineup();}
-function fillMatchInfo(m){$("#editOpponent").value=m.opponentId||opponents.find(o=>(o.name||"").toLowerCase()===(m.opponent||"").toLowerCase())?.id||"";$("#editSeason").value=m.season||settings.currentSeason||"2026";$("#editMatchday").value=m.matchday||"";$("#editType").value=m.matchType||"Friendly Match";$("#editVenue").value=m.venue||"";$("#editStatus").value=m.status||"UPCOMING";$("#editMotm").value=m.motmPlayerId||"";$("#editHomeScore").value=m.homeScore??0;$("#editAwayScore").value=m.awayScore??0;const locked=m.status==="FT";$("#editHomeScore").disabled=locked;$("#editAwayScore").disabled=locked;$("#unlockResultBtn").hidden=!locked;$("#editFormation").value=m.formation||"4-2-3-1";if(m.kickoff?.toDate){const d=m.kickoff.toDate();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());$("#editKickoff").value=d.toISOString().slice(0,16);}}
+function fillMatchInfo(m){$("#editOpponent").value=m.opponentId||opponents.find(o=>(o.name||"").toLowerCase()===(m.opponent||"").toLowerCase())?.id||"";$("#editSeason").value=m.season||settings.currentSeason||"2026";$("#editMatchday").value=m.matchday||"";$("#editType").value=m.matchType||"Friendly Match";$("#editVenue").value=m.venue||"";$("#editStatus").value=m.status||"UPCOMING";$("#editMotm").value=m.motmPlayerId||"";$("#editHomeScore").value=m.homeScore??0;$("#editAwayScore").value=m.awayScore??0;const locked=m.status==="FT";$("#editHomeScore").disabled=locked;$("#editAwayScore").disabled=locked;$("#unlockResultBtn").hidden=!locked;$("#editFormation").value=m._localFormation||m.formation||"4-2-3-1";if(m.kickoff?.toDate){const d=m.kickoff.toDate();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());$("#editKickoff").value=d.toISOString().slice(0,16);}}
 $("#matchInfoForm").addEventListener("submit",async e=>{e.preventDefault();const b=e.submitter,id=selectedMatchId;if(!id)return;busy(b,true,"Saving…");try{const ref=doc(db,"matches",id),snap=await getDoc(ref);if(!snap.exists()){clearDeletedMatchState();return toast("This match has already been deleted.","error");}const oid=$("#editOpponent").value,o=opponents.find(x=>x.id===oid),d=new Date($("#editKickoff").value);if(!o)throw new Error("Choose opponent first.");if(Number.isNaN(d.getTime()))throw new Error("Valid kick-off is required.");const motm=$("#editMotm").value,mp=players.find(x=>x.id===motm);await updateDoc(ref,{opponentId:o.id,opponent:o.name,opponentCode:o.code||"OPP",opponentLogo:o.logoData||"",opponentPrimary:o.primaryColor||"",opponentSecondary:o.secondaryColor||"",kickoff:Timestamp.fromDate(d),season:$("#editSeason").value.trim()||String(d.getFullYear()),matchday:Number($("#editMatchday").value)||null,matchType:$("#editType").value.trim()||"Friendly Match",venue:$("#editVenue").value.trim(),status:$("#editStatus").value,homeScore:Math.max(0,Number($("#editHomeScore").value)||0),awayScore:Math.max(0,Number($("#editAwayScore").value)||0),motmPlayerId:motm||"",motmPlayerName:mp?.name||"",updatedAt:serverTimestamp()});msg("#matchInfoMessage","Saved ✓","ok");toast("Match saved ✓","ok");}catch(x){msg("#matchInfoMessage",friendly(x),"error");}finally{busy(b,false,"Save Changes");}});
 $("#unlockResultBtn").onclick=()=>{$("#editHomeScore").disabled=false;$("#editAwayScore").disabled=false;$("#unlockResultBtn").hidden=true;toast("Result unlocked for correction.","ok");};
 $("#managerVisibility").onclick=()=>toggleVisible(selectedMatchId);
@@ -55,12 +67,130 @@ $("#deleteManagedMatch").onclick=()=>deleteMatch(selectedMatchId);
 async function deleteMatch(id){const m=matches.find(x=>x.id===id);if(!m)return toast("Match already deleted.","error");if(!confirm("Delete TEDU vs "+(m.opponent||"Opponent")+"? Timeline events linked to this match will also be deleted."))return;try{const b=writeBatch(db);events.filter(e=>e.matchId===id).forEach(e=>b.delete(doc(db,"events",e.id)));b.delete(doc(db,"matches",id));await b.commit();if(selectedMatchId===id){$("#matchManager").close();selectedMatchId="";lineupXI=[];lineupBench=[];}toast("Match deleted ✓","ok");page("matches");}catch(x){toast(friendly(x),"error");}}
 function clearDeletedMatchState(){selectedMatchId="";lineupXI=[];lineupBench=[];if($("#matchManager").open)$("#matchManager").close();toast("The match being edited was deleted. Editor has been reset.","error");}
 
-function renderLineup(){const el=$("#lineupPlayerGrid");if(!el||!selectedMatchId)return;const active=players.filter(p=>p.active!==false||lineupXI.includes(p.id)||lineupBench.includes(p.id));el.innerHTML=active.map(p=>{const state=lineupXI.includes(p.id)?"xi":lineupBench.includes(p.id)?"bench":"none",photo=p.photoData?'<img style="object-position:center '+Number(p.photoPositionY??20)+'%" src="'+p.photoData+'" alt="'+esc(p.name)+'">':'<span class="lineup-thumb">'+esc(initials(p.name))+'</span>';return '<button class="lineup-player" data-lineup-player="'+p.id+'" data-state="'+state+'">'+photo+'<b>#'+esc(p.number||"—")+' '+esc(p.name||"Player")+'</b><small>'+esc(p.position||"")+'</small></button>';}).join("");el.querySelectorAll("[data-lineup-player]").forEach(b=>b.onclick=()=>cycleLineup(b.dataset.lineupPlayer));updateLineupCounts();}
-function cycleLineup(id){if(lineupXI.includes(id)){lineupXI=lineupXI.filter(x=>x!==id);lineupBench.push(id);}else if(lineupBench.includes(id)){lineupBench=lineupBench.filter(x=>x!==id);}else{if(lineupXI.length>=11)return toast("Starting XI already has 11 players.","error");lineupXI.push(id);}renderLineup();}
-function updateLineupCounts(){$("#xiCount").textContent="Starting XI "+lineupXI.length+"/11";$("#benchCount").textContent="Bench "+lineupBench.length;renderLineupPitch();}
-function renderLineupPitch(){const pitch=$("#lineupPitchPreview");if(!pitch)return;pitch.querySelectorAll(".admin-pitch-player").forEach(x=>x.remove());const selected=lineupXI.map(id=>players.find(p=>p.id===id)).filter(Boolean),groups={gk:[],def:[],mid:[],att:[]};selected.forEach(p=>groups[lineupGroup(p.position)].push(p));placePitchGroup(groups.gk,8);placePitchGroup(groups.def,31);placePitchGroup(groups.mid,57);placePitchGroup(groups.att,83);function placePitchGroup(list,x){const n=list.length;if(!n)return;list.forEach((p,i)=>{const y=n===1?50:15+(70*i/(n-1)),d=document.createElement("div");d.className="admin-pitch-player";d.style.left=x+"%";d.style.top=y+"%";d.innerHTML="<b>"+esc(p.number||p.position||"P")+"</b><small>"+esc(p.name||"Player")+"</small>";pitch.appendChild(d);});}}
-function lineupGroup(pos=""){pos=String(pos).toUpperCase();if(pos.includes("GK"))return"gk";if(/CB|LB|RB|DF|WB/.test(pos))return"def";if(/DM|CM|AM|MF/.test(pos))return"mid";return"att";}
-$("#saveLineupBtn").onclick=async e=>{if(!selectedMatchId)return;busy(e.currentTarget,true,"Saving…");try{const ref=doc(db,"matches",selectedMatchId),snap=await getDoc(ref);if(!snap.exists())return clearDeletedMatchState();await updateDoc(ref,{starters:lineupXI,substitutes:lineupBench,formation:$("#editFormation").value||"4-2-3-1",updatedAt:serverTimestamp()});toast("Lineup saved ✓","ok");}catch(x){toast(friendly(x),"error");}finally{busy(e.currentTarget,false,"Save Lineup");}};
+const FORMATIONS={
+  "4-2-3-1":[["GK",8,50],["LB",30,14],["LCB",30,38],["RCB",30,62],["RB",30,86],["LDM",50,35],["RDM",50,65],["LW",70,16],["CAM",70,50],["RW",70,84],["ST",88,50]],
+  "4-3-3":[["GK",8,50],["LB",30,14],["LCB",30,38],["RCB",30,62],["RB",30,86],["LCM",55,24],["CM",55,50],["RCM",55,76],["LW",82,18],["ST",88,50],["RW",82,82]],
+  "4-4-2":[["GK",8,50],["LB",30,14],["LCB",30,38],["RCB",30,62],["RB",30,86],["LM",56,14],["LCM",56,38],["RCM",56,62],["RM",56,86],["LST",86,36],["RST",86,64]],
+  "3-5-2":[["GK",8,50],["LCB",31,24],["CB",31,50],["RCB",31,76],["LWB",57,9],["LCM",57,30],["CAM",57,50],["RCM",57,70],["RWB",57,91],["LST",86,36],["RST",86,64]],
+  "Custom":[["P1",8,50],["P2",30,14],["P3",30,38],["P4",30,62],["P5",30,86],["P6",55,22],["P7",55,50],["P8",55,78],["P9",83,18],["P10",88,50],["P11",83,82]]
+};
+function formationSpec(f=$("#editFormation")?.value||"4-2-3-1"){return(FORMATIONS[f]||FORMATIONS["4-2-3-1"]).map(([key,x,y])=>({key,x,y}));}
+function slotPlayerIds(slots=lineupSlots){return formationSpec().map(s=>slots[s.key]).filter(Boolean);}
+function hydrateLineupSlots(m,formation){
+  const spec=formationSpec(formation),saved=m.lineupSlots&&typeof m.lineupSlots==="object"?m.lineupSlots:null;
+  if(saved&&Object.values(saved).some(Boolean)){const out={};spec.forEach(s=>{if(saved[s.key])out[s.key]=saved[s.key];});const missing=(m.starters||[]).filter(id=>!Object.values(out).includes(id));return assignPlayersToSlots(missing,spec,out);}
+  return assignPlayersToSlots([...(m.starters||[])],spec,{});
+}
+function assignPlayersToSlots(ids,spec,seed={}){
+  const out={...seed},remaining=ids.filter(id=>!Object.values(out).includes(id));
+  spec.filter(s=>!out[s.key]).forEach(slot=>{if(!remaining.length)return;let best=0,bestScore=-999;remaining.forEach((id,i)=>{const p=players.find(x=>x.id===id),score=slotFitScore(slot.key,p?.position||"");if(score>bestScore){bestScore=score;best=i;}});out[slot.key]=remaining.splice(best,1)[0];});
+  return out;
+}
+function slotFitScore(slot,pos=""){
+  slot=slot.toUpperCase();pos=String(pos).toUpperCase();
+  if(slot==="GK")return pos.includes("GK")?120:-100;
+  if(/^P\d+$/.test(slot))return 10;
+  const exact={LB:["LB","LWB"],RB:["RB","RWB"],LCB:["CB","LCB"],RCB:["CB","RCB"],CB:["CB"],LDM:["CDM","DM","CM"],RDM:["CDM","DM","CM"],LCM:["CM","LCM","DM"],RCM:["CM","RCM","DM"],CM:["CM","MF"],CAM:["AM","CAM","CM"],LM:["LM","LW","LWB"],RM:["RM","RW","RWB"],LW:["LW","LM"],RW:["RW","RM"],ST:["ST","CF"],LST:["ST","CF"],RST:["ST","CF"],LWB:["LWB","LB","LM"],RWB:["RWB","RB","RM"]};
+  const list=exact[slot]||[];if(list.some(v=>pos===v))return 110;if(list.some(v=>pos.includes(v)))return 95;
+  if(/CB|LB|RB|WB/.test(slot)&&/CB|LB|RB|WB|DF/.test(pos))return 55;
+  if(/DM|CM|AM|LM|RM/.test(slot)&&/DM|CM|AM|LM|RM|MF|LW|RW/.test(pos))return 50;
+  if(/ST|LW|RW/.test(slot)&&/ST|CF|LW|RW|FW/.test(pos))return 50;
+  return 5;
+}
+function renderLineup(){
+  if(!selectedMatchId)return;
+  lineupXI=slotPlayerIds();lineupBench=lineupBench.filter(id=>!lineupXI.includes(id));
+  renderLineupPitch();renderAdminBench();renderCaptainOptions();updateLineupStatus();
+}
+function renderLineupPitch(){
+  const pitch=$("#lineupPitchPreview");if(!pitch)return;pitch.querySelectorAll(".lineup-slot").forEach(x=>x.remove());
+  const spec=formationSpec();pitch.dataset.formation=$("#editFormation").value;
+  spec.forEach((slot,i)=>{
+    const id=lineupSlots[slot.key],p=players.find(x=>x.id===id),d=document.createElement("button");
+    d.type="button";d.className="lineup-slot"+(p?" occupied":" empty");d.style.left=slot.x+"%";d.style.top=slot.y+"%";d.style.setProperty("--slot-i",i);
+    d.dataset.slot=slot.key;
+    const visual=p?.photoData?'<img style="object-position:center '+Number(p.photoPositionY??20)+'%" src="'+p.photoData+'" alt="'+esc(p.name)+'">':'<span class="slot-number">'+esc(p?.number||"+")+'</span>';
+    d.innerHTML='<span class="slot-role">'+esc(slot.key)+'</span><span class="slot-visual">'+visual+'</span><strong>'+esc(p?.name||("Add "+slot.key))+'</strong>'+(id===lineupCaptainId?'<i class="captain-mark">C</i>':'');
+    d.onclick=()=>openLineupPicker(slot.key);pitch.appendChild(d);
+  });
+}
+function renderAdminBench(){
+  const el=$("#adminBenchStrip");if(!el)return;
+  el.innerHTML=lineupBench.length?lineupBench.map(id=>{const p=players.find(x=>x.id===id);if(!p)return"";return '<button type="button" class="admin-bench-chip" data-remove-bench="'+id+'"><b>#'+esc(p.number||"—")+' '+esc(p.name||"Player")+'</b><small>'+esc(p.position||"")+' · tap to remove</small></button>';}).join(""):'<span class="muted-copy">No substitutes selected.</span>';
+  el.querySelectorAll("[data-remove-bench]").forEach(b=>b.onclick=()=>{lineupBench=lineupBench.filter(id=>id!==b.dataset.removeBench);markLineupDirty();renderLineup();});
+}
+function renderCaptainOptions(){
+  const el=$("#lineupCaptain");if(!el)return;const old=lineupCaptainId;
+  el.innerHTML='<option value="">Not selected</option>'+lineupXI.map(id=>{const p=players.find(x=>x.id===id);return p?'<option value="'+id+'">#'+esc(p.number||"—")+' '+esc(p.name)+'</option>':"";}).join("");
+  if(lineupXI.includes(old))el.value=old;else{lineupCaptainId="";el.value="";}
+}
+function updateLineupStatus(){
+  const n=lineupXI.length,gk=!!lineupSlots.GK||$("#editFormation").value==="Custom";
+  $("#xiCount").textContent="STARTING XI "+n+"/11";$("#xiCount").classList.toggle("complete",n===11);
+  $("#benchCount").textContent="BENCH "+lineupBench.length;
+  const badge=$("#lineupPublishBadge");badge.textContent=lineupIsPublished?"PUBLISHED":"DRAFT";badge.className="lineup-publish-badge "+(lineupIsPublished?"published":"draft");
+  setLineupValidation(n,gk);
+}
+function setLineupValidation(n,gk){
+  if(n<11){$("#lineupValidationTitle").textContent=(11-n)+" slots remaining";$("#lineupValidationNote").textContent="Complete all 11 pitch slots before publishing.";return;}
+  if(!gk){$("#lineupValidationTitle").textContent="Goalkeeper required";$("#lineupValidationNote").textContent="Assign a goalkeeper to the GK slot.";return;}
+  $("#lineupValidationTitle").textContent="Starting XI ready ✓";$("#lineupValidationNote").textContent="Save as draft or publish to the public Match Centre.";
+}
+function openLineupPicker(target){
+  lineupPickerTarget=target;const dlg=$("#lineupPickerDialog"),bench=target==="__BENCH__",current=bench?"":lineupSlots[target]||"";
+  $("#lineupPickerTitle").textContent=bench?"Add substitute":"Select "+target;
+  $("#lineupPickerHint").textContent=bench?"Starting XI players are excluded.":"Best positional matches appear first. Selecting another XI player swaps the two slots.";
+  $("#clearLineupSlotBtn").hidden=bench;
+  const cur=players.find(p=>p.id===current);$("#lineupPickerCurrent").innerHTML=cur?'<span>Current</span><strong>#'+esc(cur.number||"—")+' '+esc(cur.name)+'</strong>':"";
+  let list=players.filter(p=>p.active!==false||lineupXI.includes(p.id)||lineupBench.includes(p.id));
+  if(bench)list=list.filter(p=>!lineupXI.includes(p.id)&&!lineupBench.includes(p.id));
+  else list=list.slice().sort((a,b)=>slotFitScore(target,b.position)-slotFitScore(target,a.position)||(a.number||"999").localeCompare(b.number||"999",undefined,{numeric:true}));
+  const el=$("#lineupPickerList");el.innerHTML=list.length?list.map(p=>{const inXI=lineupXI.includes(p.id),inBench=lineupBench.includes(p.id),recommended=!bench&&slotFitScore(target,p.position)>=90,photo=p.photoData?'<img style="object-position:center '+Number(p.photoPositionY??20)+'%" src="'+p.photoData+'" alt="'+esc(p.name)+'">':'<span>'+esc(initials(p.name))+'</span>';return '<button type="button" class="lineup-pick-player'+(p.id===current?" current":"")+'" data-pick-player="'+p.id+'">'+photo+'<div><b>#'+esc(p.number||"—")+' '+esc(p.name)+'</b><small>'+esc(p.position||"PLAYER")+(recommended?" · RECOMMENDED":"")+(inXI&&p.id!==current?" · XI":"")+(inBench?" · BENCH":"")+'</small></div></button>';}).join(""):'<p class="muted-copy">No available players.</p>';
+  el.querySelectorAll("[data-pick-player]").forEach(b=>b.onclick=()=>assignPickedPlayer(b.dataset.pickPlayer));dlg.showModal();
+}
+function assignPickedPlayer(id){
+  if(lineupPickerTarget==="__BENCH__"){if(!lineupBench.includes(id))lineupBench.push(id);}
+  else{
+    const target=lineupPickerTarget,current=lineupSlots[target]||"",other=Object.keys(lineupSlots).find(k=>lineupSlots[k]===id&&k!==target);
+    if(other){lineupSlots[target]=id;if(current)lineupSlots[other]=current;else delete lineupSlots[other];}
+    else{lineupSlots[target]=id;lineupBench=lineupBench.filter(x=>x!==id);}
+    if(current&&current===lineupCaptainId&&current!==id)lineupCaptainId="";
+  }
+  markLineupDirty();$("#lineupPickerDialog").close();renderLineup();
+}
+$("#clearLineupSlotBtn").onclick=()=>{if(!lineupPickerTarget||lineupPickerTarget==="__BENCH__")return;const id=lineupSlots[lineupPickerTarget];delete lineupSlots[lineupPickerTarget];if(id===lineupCaptainId)lineupCaptainId="";markLineupDirty();$("#lineupPickerDialog").close();renderLineup();};
+$("#addBenchPlayerBtn").onclick=()=>openLineupPicker("__BENCH__");
+$("#lineupCaptain").onchange=e=>{lineupCaptainId=e.target.value;markLineupDirty();renderLineupPitch();};
+$("#editFormation").onchange=e=>{const ids=lineupXI.slice();lineupSlots=assignPlayersToSlots(ids,formationSpec(e.target.value),{});lineupXI=slotPlayerIds();markLineupDirty();renderLineup();};
+$("#autoFillLineupBtn").onclick=()=>{
+  const spec=formationSpec(),available=players.filter(p=>p.active!==false&&!lineupBench.includes(p.id)),chosen=[],out={};
+  spec.forEach(slot=>{const pool=available.filter(p=>!chosen.includes(p.id));if(!pool.length)return;pool.sort((a,b)=>slotFitScore(slot.key,b.position)-slotFitScore(slot.key,a.position)||(a.number||"999").localeCompare(b.number||"999",undefined,{numeric:true}));out[slot.key]=pool[0].id;chosen.push(pool[0].id);});
+  lineupSlots=out;lineupXI=slotPlayerIds();if(lineupCaptainId&&!lineupXI.includes(lineupCaptainId))lineupCaptainId="";markLineupDirty();renderLineup();toast("Auto Fill applied — review before publishing.","ok");
+};
+$("#copyPreviousLineupBtn").onclick=()=>{
+  const cur=matches.find(m=>m.id===selectedMatchId),curTime=ms(cur?.kickoff),prev=[...matches].filter(m=>m.id!==selectedMatchId&&(m.starters||[]).length&&ms(m.kickoff)<curTime).sort((a,b)=>ms(b.kickoff)-ms(a.kickoff))[0];
+  if(!prev)return toast("No previous lineup found.","error");
+  $("#editFormation").value=prev.formation||"4-2-3-1";lineupSlots=hydrateLineupSlots(prev,$("#editFormation").value);lineupBench=[...(prev.substitutes||[])];lineupCaptainId=prev.captainId||"";markLineupDirty();renderLineup();toast("Previous XI copied ✓","ok");
+};
+$("#clearLineupBtn").onclick=()=>{if(!confirm("Clear the Starting XI? Bench will be kept."))return;lineupSlots={};lineupXI=[];lineupCaptainId="";markLineupDirty();renderLineup();};
+$("#previewPublicLineupBtn").onclick=()=>{if(!selectedMatchId)return;window.open("/?match="+encodeURIComponent(selectedMatchId)+"#match-centre","_blank","noopener");};
+$("#saveLineupDraftBtn").onclick=e=>saveLineupV2(false,e.currentTarget);
+$("#publishLineupBtn").onclick=e=>saveLineupV2(true,e.currentTarget);
+async function saveLineupV2(publish,button){
+  if(!selectedMatchId)return;lineupXI=slotPlayerIds();const hasGK=!!lineupSlots.GK||$("#editFormation").value==="Custom";
+  if(publish&&lineupXI.length!==11)return toast("Complete all 11 Starting XI slots first.","error");
+  if(publish&&!hasGK)return toast("Assign a goalkeeper before publishing.","error");
+  busy(button,true,publish?"Publishing…":"Saving…");
+  try{
+    const ref=doc(db,"matches",selectedMatchId),snap=await getDoc(ref);if(!snap.exists())return clearDeletedMatchState();
+    await updateDoc(ref,{starters:lineupXI,substitutes:lineupBench,formation:$("#editFormation").value||"4-2-3-1",lineupSlots:{...lineupSlots},captainId:lineupCaptainId||"",lineupPublished:publish,updatedAt:serverTimestamp()});
+    lineupIsPublished=publish;clearLocalLineupDraft(selectedMatchId);updateLineupStatus();toast(publish?"Lineup published ✓":"Draft saved ✓","ok");
+  }catch(x){toast(friendly(x),"error");}finally{busy(button,false,publish?"Publish Lineup":"Save Draft");}
+}
+function markLineupDirty(){lineupIsPublished=false;lineupXI=slotPlayerIds();saveLocalLineupDraft();updateLineupStatus();}
+function saveLocalLineupDraft(){if(!selectedMatchId)return;try{localStorage.setItem("tedu-lineup-"+selectedMatchId,JSON.stringify({formation:$("#editFormation")?.value||"4-2-3-1",lineupSlots,lineupBench,captainId:lineupCaptainId,savedAt:Date.now()}));}catch{}}
+function loadLocalLineupDraft(id){try{const raw=localStorage.getItem("tedu-lineup-"+id);return raw?JSON.parse(raw):null;}catch{return null;}}
+function clearLocalLineupDraft(id){try{localStorage.removeItem("tedu-lineup-"+id);}catch{}}
 
 function refreshLive(m){$("#liveHomeScore").textContent=m.homeScore??0;$("#liveAwayScore").textContent=m.awayScore??0;$("#liveAwayCode").textContent=m.opponentCode||"OPP";}
 $$("[data-score]").forEach(b=>b.onclick=async()=>{const m=matches.find(x=>x.id===selectedMatchId);if(!m)return toast("Choose a match first.","error");const [side,delta]=b.dataset.score.split(":"),k=side==="home"?"homeScore":"awayScore",n=Math.max(0,(Number(m[k])||0)+Number(delta));try{await updateDoc(doc(db,"matches",m.id),{[k]:n,updatedAt:serverTimestamp()});}catch(x){toast(friendly(x),"error");}});
