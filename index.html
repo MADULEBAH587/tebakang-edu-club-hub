@@ -48,41 +48,53 @@
   </header>
 
   <main class="view-shell">
-    <section class="public-view active" data-view="home" id="home">
+    <section class="public-view active home-mode-normal" data-view="home" id="home">
       <div class="home-dashboard">
-        <div class="home-identity">
-          <div>
-            <div class="eyebrow"><span class="live-dot"></span>DIGITAL CLUBHOUSE · <span id="heroSeason">2026</span></div>
-            <h1>TEBAKANG<br><span>EDU CLUB HUB</span></h1>
-            <p>Kalah biasa, menang luar biasa.</p>
-          </div>
-          <img src="./assets/tebakang-edu-logo.webp" alt="Tebakang Educator FC">
+        <div class="home-topline">
+          <a href="#home" class="home-mini-brand">
+            <span class="home-crest-shell"><span class="crest-ring"></span><img src="./assets/tebakang-edu-logo.webp" alt="Tebakang Educator FC"></span>
+            <div><strong>TEBAKANG EDU</strong><small>CLUB HUB · SEASON <span id="heroSeason">2026</span></small></div>
+          </a>
+          <div class="home-mode-pill"><span class="mode-dot"></span><div><strong id="homeModeLabel">CLUB MODE</strong><small id="homeModeNote">Latest club update</small></div></div>
         </div>
 
-        <div class="home-grid">
-          <article class="home-result-card glass-card">
+        <div class="home-grid dynamic-home-grid">
+          <article class="home-result-card glass-card animated-card main-focus-card">
+            <span class="card-light-sweep" aria-hidden="true"></span>
             <div class="home-card-head"><span class="kicker" id="homeResultKicker">LATEST RESULT</span><span id="homeResultStatus" class="status-pill ft">TBA</span></div>
             <div class="home-result-body">
-              <div class="home-team"><img src="./assets/tebakang-edu-logo.webp" alt=""><strong>TEDU</strong></div>
+              <div class="home-team"><span class="team-crest-glow"><img src="./assets/tebakang-edu-logo.webp" alt=""></span><strong>TEDU</strong></div>
               <div class="home-score"><strong id="homeLatestScore">—</strong><small id="homeLatestMeta">No completed match yet.</small></div>
-              <div class="home-team"><img id="homeLatestOpponentLogo" alt=""><strong id="homeLatestOpponent">TBA</strong></div>
+              <div class="home-team"><span class="team-crest-glow away"><img id="homeLatestOpponentLogo" alt=""></span><strong id="homeLatestOpponent">TBA</strong></div>
             </div>
-            <a class="dashboard-link" href="#match-centre">Open Match Centre →</a>
+            <div class="home-match-actions">
+              <a class="dashboard-link primary-link" href="#match-centre"><span id="homeMatchAction">Open Match Centre</span> →</a>
+              <span id="homeMatchPulseText" class="match-pulse-text">REALTIME CLUB DATA</span>
+            </div>
           </article>
 
-          <article class="home-next-card glass-card">
+          <article class="home-next-card glass-card animated-card">
+            <span class="stadium-beam beam-a" aria-hidden="true"></span><span class="stadium-beam beam-b" aria-hidden="true"></span>
             <div><span class="kicker">NEXT MATCH</span><h2 id="nextMatchTitle">Ready for the next one.</h2><p id="nextMatchMeta">Perlawanan seterusnya belum diumumkan.</p></div>
-            <div class="home-next-bottom"><div id="nextMatchCountdown" class="countdown">TBA</div><div class="next-opponent"><img id="nextOpponentLogo" alt=""><span id="nextOpponentCode">TBA</span></div></div>
+            <div class="home-next-bottom"><div id="nextMatchCountdown" class="countdown animated-countdown">TBA</div><div class="next-opponent"><span class="next-logo-halo"><img id="nextOpponentLogo" alt=""></span><span id="nextOpponentCode">TBA</span></div></div>
           </article>
+        </div>
+
+        <div class="home-pulse-grid glass-card animated-card">
+          <div class="pulse-heading"><span class="kicker">CLUB PULSE</span><small>SEASON <span id="homePulseSeason">2026</span></small></div>
+          <div class="pulse-stat"><span>MATCHES</span><strong id="homePulseMatches" data-count="0">0</strong></div>
+          <div class="pulse-stat"><span>WINS</span><strong id="homePulseWins" data-count="0">0</strong></div>
+          <div class="pulse-stat"><span>GOALS</span><strong id="homePulseGoals" data-count="0">0</strong></div>
+          <div class="pulse-stat"><span>SQUAD</span><strong id="homePulseSquad" data-count="0">0</strong></div>
         </div>
 
         <div class="home-lower">
-          <div class="form-panel glass-card"><div><span class="kicker">RECENT FORM</span><small>LAST 5 COMPLETED MATCHES</small></div><div id="recentForm" class="recent-form"></div></div>
+          <div class="form-panel glass-card animated-card"><div><span class="kicker">RECENT FORM</span><small>LAST 5 COMPLETED MATCHES</small></div><div id="recentForm" class="recent-form"></div></div>
           <div class="quick-public-grid">
-            <a href="#matches"><span>▤</span><strong>Fixtures & Results</strong><small>All matches</small></a>
-            <a href="#squad"><span>👥</span><strong>Squad</strong><small>Meet the players</small></a>
-            <a href="#media"><span>▦</span><strong>Gallery</strong><small>Club moments</small></a>
-            <a href="#stats"><span>▥</span><strong>Club Stats</strong><small>Season overview</small></a>
+            <a class="quick-animated" href="#match-centre"><span>⚽</span><strong>Match Centre</strong><small>Live & match detail</small></a>
+            <a class="quick-animated" href="#matches"><span>▤</span><strong>Matches</strong><small>Fixtures & results</small></a>
+            <a class="quick-animated" href="#squad"><span>👥</span><strong>Squad</strong><small>Meet the players</small></a>
+            <a class="quick-animated" href="#media"><span>▦</span><strong>Gallery</strong><small>Club moments</small></a>
           </div>
         </div>
       </div>
