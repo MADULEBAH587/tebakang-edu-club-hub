@@ -147,12 +147,41 @@
       </section>
 
       <section class="manager-panel" data-match-panel="lineup">
-        <div class="lineup-head"><div><span class="eyebrow">TEAM SELECTION</span><h3>Starting XI & Bench</h3></div><label>Formation<select id="editFormation"><option>4-2-3-1</option><option>4-3-3</option><option>4-4-2</option><option>3-5-2</option><option>Custom</option></select></label></div>
-        <div class="selection-counts"><span id="xiCount">Starting XI 0/11</span><span id="benchCount">Bench 0</span></div>
-        <div id="lineupPitchPreview" class="admin-pitch"><div class="pitch-mid"></div><div class="pitch-circle"></div></div>
-        <p class="muted-copy">Tap a player to cycle: Not Selected → Starting XI → Bench.</p>
-        <div id="lineupPlayerGrid" class="lineup-player-grid"></div>
-        <div class="sticky-actions"><button id="saveLineupBtn" class="primary grow">Save Lineup</button></div>
+        <div class="lineup-v2-head">
+          <div><span class="eyebrow">TACTICAL LINEUP</span><h3>Formation & Team Selection</h3><p>Tap a pitch slot, then choose the player for that role.</p></div>
+          <div class="lineup-v2-tools">
+            <label>Formation<select id="editFormation"><option>4-2-3-1</option><option>4-3-3</option><option>4-4-2</option><option>3-5-2</option><option>Custom</option></select></label>
+            <label>Captain<select id="lineupCaptain"><option value="">Not selected</option></select></label>
+          </div>
+        </div>
+
+        <div class="lineup-statusbar">
+          <span id="xiCount" class="lineup-count">STARTING XI 0/11</span>
+          <span id="benchCount" class="lineup-count">BENCH 0</span>
+          <span id="lineupPublishBadge" class="lineup-publish-badge draft">DRAFT</span>
+        </div>
+
+        <div class="lineup-commandbar">
+          <button id="autoFillLineupBtn" class="secondary" type="button">Auto Fill</button>
+          <button id="copyPreviousLineupBtn" class="secondary" type="button">Use Last XI</button>
+          <button id="clearLineupBtn" class="secondary" type="button">Clear XI</button>
+          <button id="previewPublicLineupBtn" class="secondary" type="button">Preview Public ↗</button>
+        </div>
+
+        <div id="lineupPitchPreview" class="admin-pitch tactical-pitch">
+          <div class="pitch-mid"></div><div class="pitch-circle"></div>
+        </div>
+
+        <div class="bench-editor">
+          <div class="bench-editor-head"><div><span class="eyebrow">BENCH</span><small>Substitutes</small></div><button id="addBenchPlayerBtn" class="secondary" type="button">+ Add Player</button></div>
+          <div id="adminBenchStrip" class="admin-bench-strip"><span class="muted-copy">No substitutes selected.</span></div>
+        </div>
+
+        <div class="lineup-publish-controls">
+          <div><strong id="lineupValidationTitle">Build your Starting XI</strong><small id="lineupValidationNote">Select 11 players before publishing.</small></div>
+          <button id="saveLineupDraftBtn" class="secondary" type="button">Save Draft</button>
+          <button id="publishLineupBtn" class="primary" type="button">Publish Lineup</button>
+        </div>
       </section>
 
       <section class="manager-panel" data-match-panel="live">
@@ -182,6 +211,15 @@
         <div class="poster-stage"><canvas id="posterCanvas" width="1080" height="1350"></canvas></div>
         <div id="posterMessage" class="message"></div>
       </section>
+    </div>
+  </dialog>
+
+  <dialog id="lineupPickerDialog" class="sheet-dialog lineup-picker-dialog">
+    <div class="sheet">
+      <div class="sheet-head"><div><span class="eyebrow">SELECT PLAYER</span><h2 id="lineupPickerTitle">Choose player</h2><small id="lineupPickerHint">Best positional matches appear first.</small></div><button type="button" class="icon-close" data-close="lineupPickerDialog">✕</button></div>
+      <div id="lineupPickerCurrent" class="lineup-picker-current"></div>
+      <div id="lineupPickerList" class="lineup-picker-list"></div>
+      <div class="sticky-actions"><button id="clearLineupSlotBtn" type="button" class="secondary grow">Clear Slot</button><button type="button" class="secondary" data-close="lineupPickerDialog">Cancel</button></div>
     </div>
   </dialog>
 
