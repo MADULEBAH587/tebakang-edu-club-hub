@@ -17,7 +17,11 @@ $$("[data-more]").forEach(b=>b.onclick=()=>{page("more");showTool(b.dataset.more
 function page(n){$$("[data-page-panel]").forEach(p=>p.classList.toggle("active",p.dataset.pagePanel===n));$$("#adminNav [data-page]").forEach(b=>b.classList.toggle("active",b.dataset.page===n));$("#pageTitle").textContent=({home:"Home",matches:"Matches",squad:"Squad",more:"More"})[n]||"Club Hub";window.scrollTo({top:0,behavior:"smooth"});}
 $$("[data-tool]").forEach(b=>b.onclick=()=>showTool(b.dataset.tool));
 function showTool(n){$$(".tool-panel").forEach(x=>x.hidden=x.id!=="tool-"+n);setTimeout(()=>$("#tool-"+n)?.scrollIntoView({behavior:"smooth",block:"start"}),30);}
-$$("[data-close]").forEach(b=>b.onclick=()=>document.getElementById(b.dataset.close)?.close());
+$("[data-close]").forEach(b=>b.onclick=()=>document.getElementById(b.dataset.close)?.close());
+document.addEventListener("click",e=>{
+  const add=e.target.closest("#newPlayerBtn");if(!add)return;
+  e.preventDefault();e.stopPropagation();openPlayerEditor("");
+});
 
 onSnapshot(collection(db,"matches"),s=>{matches=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>ms(b.kickoff)-ms(a.kickoff));renderMatches();overview();fillMatchSelects();counts();renderMatchdayHero();renderHomeMatchSnapshots();if(selectedMatchId){const exists=matches.some(m=>m.id===selectedMatchId);if(exists)refreshManager();else clearDeletedMatchState();}},e=>toast(friendly(e),"error"));
 onSnapshot(collection(db,"players"),s=>{players=s.docs.map(d=>({id:d.id,...d.data()})).sort(playerSort);renderPlayers();fillPlayers();counts();if(selectedMatchId)renderLineup();},e=>toast(friendly(e),"error"));
@@ -145,7 +149,7 @@ function openLineupPicker(target){
   let list=players.filter(p=>p.active!==false||lineupXI.includes(p.id)||lineupBench.includes(p.id));
   if(bench)list=list.filter(p=>!lineupXI.includes(p.id)&&!lineupBench.includes(p.id));
   else list=list.slice().sort((a,b)=>slotFitScore(target,b.position)-slotFitScore(target,a.position)||(a.number||"999").localeCompare(b.number||"999",undefined,{numeric:true}));
-  const el=$("#lineupPickerList");el.innerHTML=list.length?list.map(p=>{const inXI=lineupXI.includes(p.id),inBench=lineupBench.includes(p.id),recommended=!bench&&slotFitScore(target,p.position)>=90,photo=p.photoData?'<img style="object-position:center '+Number(p.photoPositionY??20)+'%" src="'+p.photoData+'" alt="'+esc(p.name)+'">':'<span>'+esc(initials(p.name))+'</span>';return '<button type="button" class="lineup-pick-player'+(p.id===current?" current":"")+'" data-pick-player="'+p.id+'">'+photo+'<div><b>#'+esc(p.number||"—")+' '+esc(p.name)+'</b><small>'+esc(p.position||"PLAYER")+(recommended?" · RECOMMENDED":"")+(inXI&&p.id!==current?" · XI":"")+(inBench?" · BENCH":"")+'</small></div></button>';}).join(""):'<p class="muted-copy">No available players.</p>';
+  const el=$("#lineupPickerList");el.innerHTML=list.length?list.map(p=>{const inXI=lineupXI.includes(p.id),inBench=lineupBench.includes(p.id),recommended=!bench&&slotFitScore(target,p.position)>=90,photo=p.photoData?'<img style="object-position:center '+Number(p.photoPositionY??20)+'%" src="'+p.photoData+'" alt="'+esc(p.name)+'">':'<span>'+esc(initials(p.name))+'</span>';return '<button type="button" class="lineup-pick-player'+(p.id===current?" current":"")+'" data-pick-player="'+p.id+'">'+photo+'<div><div class="lineup-pick-top"><b>#'+esc(p.number||"—")+' '+esc(p.name)+'</b><em class="player-type '+playerTypeOf(p)+'">'+playerTypeLabel(p)+'</em></div><small>'+esc(p.position||"PLAYER")+(recommended?" · RECOMMENDED":"")+(inXI&&p.id!==current?" · XI":"")+(inBench?" · BENCH":"")+'</small></div></button>';}).join(""):'<p class="muted-copy">No available players.</p>';
   el.querySelectorAll("[data-pick-player]").forEach(b=>b.onclick=()=>assignPickedPlayer(b.dataset.pickPlayer));dlg.showModal();
 }
 function assignPickedPlayer(id){
@@ -201,13 +205,25 @@ async function deleteEvent(id){const ev=events.find(x=>x.id===id);if(!ev||!confi
 function desc(e){if(e.type==="GOAL")return e.team==="home"?(e.playerName||"TEDU goal")+(e.secondaryPlayerName?" · Assist "+e.secondaryPlayerName:""):(e.note||e.opponent+" goal");if(e.type==="SUB")return(e.playerName||"Player out")+" → "+(e.secondaryPlayerName||"Player in");if(e.type==="YELLOW"||e.type==="RED")return e.team==="home"?(e.playerName||"TEDU"):(e.note||e.opponent);return e.note||e.playerName||"Match note";}
 function icon(t){return({GOAL:"⚽",YELLOW:"🟨",RED:"🟥",SUB:"🔄",NOTE:"•"})[t]||"•";}
 
-$$("[data-squad-filter]").forEach(b=>b.onclick=()=>{$$("[data-squad-filter]").forEach(x=>x.classList.remove("active"));b.classList.add("active");squadFilter=b.dataset.squadFilter;renderPlayers();});
-function renderPlayers(){const el=$("#playerAdminList"),list=players.filter(p=>squadFilter==="all"||(squadFilter==="active"?p.active!==false:p.active===false));el.innerHTML=list.length?list.map(p=>'<button class="player-admin-card" data-edit-player="'+p.id+'"><div class="player-admin-photo">'+(p.photoData?'<img src="'+p.photoData+'" alt="'+esc(p.name)+'">':'<span>'+esc(initials(p.name))+'</span>')+'</div><div class="player-admin-copy"><b>#'+esc(p.number||"—")+' '+esc(p.name||"Player")+'</b><small>'+esc(p.position||"—")+'</small><em class="'+(p.active===false?"inactive":"")+'">'+(p.active===false?"ARCHIVED":"ACTIVE")+'</em></div></button>').join(""):'<div class="empty">No players in this list.</div>';el.querySelectorAll("[data-edit-player]").forEach(b=>b.onclick=()=>openPlayerEditor(b.dataset.editPlayer));}
-$("#newPlayerBtn").onclick=()=>openPlayerEditor("");
+$("[data-squad-filter]").forEach(b=>b.onclick=()=>{$("[data-squad-filter]").forEach(x=>x.classList.remove("active"));b.classList.add("active");squadFilter=b.dataset.squadFilter;renderPlayers();});
+function playerTypeOf(p){return p?.playerType==="import"?"import":"original";}
+function playerTypeLabel(p){return playerTypeOf(p)==="import"?"IMPORT":"ORIGINAL";}
+function renderPlayers(){
+  const el=$("#playerAdminList");
+  const list=players.filter(p=>{
+    if(squadFilter==="all")return true;
+    if(squadFilter==="inactive")return p.active===false;
+    if(squadFilter==="original")return p.active!==false&&playerTypeOf(p)==="original";
+    if(squadFilter==="import")return p.active!==false&&playerTypeOf(p)==="import";
+    return p.active!==false;
+  });
+  el.innerHTML=list.length?list.map(p=>'<button class="player-admin-card" data-edit-player="'+p.id+'" type="button"><div class="player-admin-photo">'+(p.photoData?'<img src="'+p.photoData+'" alt="'+esc(p.name)+'">':'<span>'+esc(initials(p.name))+'</span>')+'</div><div class="player-admin-copy"><div class="player-admin-badges"><em class="player-type '+playerTypeOf(p)+'">'+playerTypeLabel(p)+'</em><em class="'+(p.active===false?"inactive":"")+'">'+(p.active===false?"ARCHIVED":"ACTIVE")+'</em></div><b>#'+esc(p.number||"—")+' '+esc(p.name||"Player")+'</b><small>'+esc(p.position||"—")+'</small></div></button>').join(""):'<div class="empty">No players in this list.</div>';
+  el.querySelectorAll("[data-edit-player]").forEach(b=>b.onclick=()=>openPlayerEditor(b.dataset.editPlayer));
+}
 function openPlayerEditor(id){
   const p=players.find(x=>x.id===id);
   $("#playerForm").reset();$("#playerId").value=p?.id||"";$("#playerDialogTitle").textContent=p?"Edit Player":"Add Player";
-  $("#playerName").value=p?.name||"";$("#playerPosition").value=p?.position||"";$("#playerNumber").value=p?.number||"";$("#playerActive").value=String(p?.active!==false);
+  $("#playerName").value=p?.name||"";$("#playerPosition").value=p?.position||"";$("#playerNumber").value=p?.number||"";$("#playerType").value=playerTypeOf(p);$("#playerActive").value=String(p?.active!==false);
   $("#playerPhotoPosition").value=String(p?.photoPositionY??20);editingPlayerPhoto=p?.photoData||"";pendingPlayerPhoto="";pendingPlayerOriginalPhoto="";pendingPlayerCutoutPhoto="";playerPhotoChoice=p?.photoMode||"original";
   preview("#playerPhotoPreview",editingPlayerPhoto);$("#playerPhotoPreview").style.objectPosition="center "+$("#playerPhotoPosition").value+"%";$("#playerPhotoPlaceholder").style.display=editingPlayerPhoto?"none":"block";
   $("#cutoutChoice").hidden=true;$("#cutoutBadge").textContent=playerPhotoChoice==="cutout"?"CUTOUT READY":"AUTO CUTOUT";msg("#cutoutStatus",editingPlayerPhoto?(playerPhotoChoice==="cutout"?"Transparent player cutout saved.":"Current player photo loaded."):"Upload a player photo. Background removal runs on this device.");
@@ -251,7 +267,7 @@ $("#removePlayerPhoto").onclick=()=>{pendingPlayerPhoto="__REMOVE__";pendingPlay
 $("#playerForm").addEventListener("submit",async e=>{
   e.preventDefault();const b=e.submitter,name=$("#playerName").value.trim(),position=$("#playerPosition").value.trim().toUpperCase();if(!name||!position)return msg("#playerMessage","Name and position are required.","error");
   const id=$("#playerId").value||slug(name),photo=pendingPlayerPhoto==="__REMOVE__"?"":pendingPlayerPhoto||editingPlayerPhoto||"";busy(b,true,"Saving…");
-  try{await setDoc(doc(db,"players",id),{name,position,number:$("#playerNumber").value.trim(),active:$("#playerActive").value==="true",photoData:photo,photoMode:photo?playerPhotoChoice:"",photoPositionY:Number($("#playerPhotoPosition").value)||20,updatedAt:serverTimestamp()},{merge:true});$("#playerDialog").close();toast("Player saved ✓","ok");}
+  try{await setDoc(doc(db,"players",id),{name,position,number:$("#playerNumber").value.trim(),playerType:$("#playerType").value==="import"?"import":"original",active:$("#playerActive").value==="true",photoData:photo,photoMode:photo?playerPhotoChoice:"",photoPositionY:Number($("#playerPhotoPosition").value)||20,updatedAt:serverTimestamp()},{merge:true});$("#playerDialog").close();toast("Player saved ✓","ok");}
   catch(x){msg("#playerMessage",friendly(x),"error");}finally{busy(b,false,"Save Player");}
 });
 
