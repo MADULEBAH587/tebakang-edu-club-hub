@@ -25,18 +25,18 @@ function openAdminSidebar(){document.body.classList.add("admin-sidebar-open");ad
 function closeAdminSidebar(){document.body.classList.remove("admin-sidebar-open");adminSidebar?.classList.remove("open");adminSidebarBackdrop?.classList.remove("show");adminMenuButton?.setAttribute("aria-expanded","false");}
 function page(n){
   if(!ADMIN_PAGE_META[n])n="home";
-  $("[data-page-panel]").forEach(p=>p.classList.toggle("active",p.dataset.pagePanel===n));
-  $("#adminNav [data-page]").forEach(b=>b.classList.toggle("active",b.dataset.page===n));
+  $$("[data-page-panel]").forEach(p=>p.classList.toggle("active",p.dataset.pagePanel===n));
+  $$("#adminNav [data-page]").forEach(b=>b.classList.toggle("active",b.dataset.page===n));
   $("#pageTitle").textContent=ADMIN_PAGE_META[n][0];
   $("#pageSubtitle").textContent=ADMIN_PAGE_META[n][1];
   closeAdminSidebar();window.scrollTo({top:0,behavior:"auto"});
 }
 $("#adminNav").addEventListener("click",e=>{const b=e.target.closest("[data-page]");if(b)page(b.dataset.page);});
-$("[data-go]").forEach(b=>b.onclick=()=>page(b.dataset.go));
+$$("[data-go]").forEach(b=>b.onclick=()=>page(b.dataset.go));
 adminMenuButton?.addEventListener("click",e=>{e.preventDefault();e.stopPropagation();openAdminSidebar();});
 $("#adminSidebarClose")?.addEventListener("click",closeAdminSidebar);
 adminSidebarBackdrop?.addEventListener("click",closeAdminSidebar);
-$("[data-close]").forEach(b=>b.onclick=()=>safeCloseDialog(b.dataset.close));
+$$("[data-close]").forEach(b=>b.onclick=()=>safeCloseDialog(b.dataset.close));
 function safeCloseDialog(id){const d=document.getElementById(id);if(d?.open)d.close();}
 function safeShowDialog(id){const d=document.getElementById(id);if(!d)throw new Error("Dialog "+id+" is unavailable.");if(!d.open)d.showModal();return d;}
 
@@ -79,8 +79,8 @@ function openMatchManager(id){
   }catch(err){console.error("openMatchManager",err);toast("Could not open this match. Please refresh and try again.","error");}
 }
 $("#closeMatchManager").onclick=()=>{$("#matchManager").close();selectedMatchId="";lineupXI=[];lineupBench=[];lineupSlots={};lineupCaptainId="";lineupPickerTarget="";};
-$("[data-match-tab]").forEach(b=>b.onclick=()=>switchMatchTab(b.dataset.matchTab));
-function switchMatchTab(n){$("[data-match-tab]").forEach(b=>b.classList.toggle("active",b.dataset.matchTab===n));$("[data-match-panel]").forEach(p=>p.classList.toggle("active",p.dataset.matchPanel===n));if(n==="poster")generatePoster();}
+$$("[data-match-tab]").forEach(b=>b.onclick=()=>switchMatchTab(b.dataset.matchTab));
+function switchMatchTab(n){$$("[data-match-tab]").forEach(b=>b.classList.toggle("active",b.dataset.matchTab===n));$$("[data-match-panel]").forEach(p=>p.classList.toggle("active",p.dataset.matchPanel===n));if(n==="poster")generatePoster();}
 function refreshManager(){const m=matches.find(x=>x.id===selectedMatchId);if(!m)return;$("#managerTitle").textContent="TEDU vs "+(m.opponent||"Opponent");$("#managerMeta").textContent=date(m.kickoff)+" · "+(m.venue||"Venue TBA")+" · "+(m.matchType||"Friendly");$("#managerStatus").textContent=m.status||"UPCOMING";$("#managerVisibility").textContent=m.publicVisible===false?"HIDDEN":"PUBLIC";$("#managerVisibility").classList.toggle("hidden",m.publicVisible===false);fillMatchInfo(m);refreshLive(m);renderEvents();renderLineup();}
 function fillMatchInfo(m){$("#editOpponent").value=m.opponentId||opponents.find(o=>(o.name||"").toLowerCase()===(m.opponent||"").toLowerCase())?.id||"";$("#editSeason").value=m.season||settings.currentSeason||"2026";$("#editMatchday").value=m.matchday||"";$("#editType").value=m.matchType||"Friendly Match";$("#editVenue").value=m.venue||"";$("#editStatus").value=m.status||"UPCOMING";$("#editMotm").value=m.motmPlayerId||"";$("#editHomeScore").value=m.homeScore??0;$("#editAwayScore").value=m.awayScore??0;const locked=m.status==="FT";$("#editHomeScore").disabled=locked;$("#editAwayScore").disabled=locked;$("#unlockResultBtn").hidden=!locked;$("#editFormation").value=m._localFormation||m.formation||"4-2-3-1";if(m.kickoff?.toDate){const d=m.kickoff.toDate();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());$("#editKickoff").value=d.toISOString().slice(0,16);}}
 $("#matchInfoForm").addEventListener("submit",async e=>{e.preventDefault();const b=e.submitter,id=selectedMatchId;if(!id)return;busy(b,true,"Saving…");try{const ref=doc(db,"matches",id),snap=await getDoc(ref);if(!snap.exists()){clearDeletedMatchState();return toast("This match has already been deleted.","error");}const oid=$("#editOpponent").value,o=opponents.find(x=>x.id===oid),d=new Date($("#editKickoff").value);if(!o)throw new Error("Choose opponent first.");if(Number.isNaN(d.getTime()))throw new Error("Valid kick-off is required.");const motm=$("#editMotm").value,mp=players.find(x=>x.id===motm);await updateDoc(ref,{opponentId:o.id,opponent:o.name,opponentCode:o.code||"OPP",opponentLogo:o.logoData||"",opponentPrimary:o.primaryColor||"",opponentSecondary:o.secondaryColor||"",kickoff:Timestamp.fromDate(d),season:$("#editSeason").value.trim()||String(d.getFullYear()),matchday:Number($("#editMatchday").value)||null,matchType:$("#editType").value.trim()||"Friendly Match",venue:$("#editVenue").value.trim(),status:$("#editStatus").value,homeScore:Math.max(0,Number($("#editHomeScore").value)||0),awayScore:Math.max(0,Number($("#editAwayScore").value)||0),motmPlayerId:motm||"",motmPlayerName:mp?.name||"",updatedAt:serverTimestamp()});msg("#matchInfoMessage","Saved ✓","ok");toast("Match saved ✓","ok");}catch(x){msg("#matchInfoMessage",friendly(x),"error");}finally{busy(b,false,"Save Changes");}});
@@ -225,7 +225,7 @@ async function deleteEvent(id){const ev=events.find(x=>x.id===id);if(!ev||!confi
 function desc(e){if(e.type==="GOAL")return e.team==="home"?(e.playerName||"TEDU goal")+(e.secondaryPlayerName?" · Assist "+e.secondaryPlayerName:""):(e.note||e.opponent+" goal");if(e.type==="SUB")return(e.playerName||"Player out")+" → "+(e.secondaryPlayerName||"Player in");if(e.type==="YELLOW"||e.type==="RED")return e.team==="home"?(e.playerName||"TEDU"):(e.note||e.opponent);return e.note||e.playerName||"Match note";}
 function icon(t){return({GOAL:"⚽",YELLOW:"🟨",RED:"🟥",SUB:"🔄",NOTE:"•"})[t]||"•";}
 
-$("[data-squad-filter]").forEach(b=>b.onclick=()=>{$("[data-squad-filter]").forEach(x=>x.classList.remove("active"));b.classList.add("active");squadFilter=b.dataset.squadFilter;renderPlayers();});
+$$("[data-squad-filter]").forEach(b=>b.onclick=()=>{$$("[data-squad-filter]").forEach(x=>x.classList.remove("active"));b.classList.add("active");squadFilter=b.dataset.squadFilter;renderPlayers();});
 function playerTypeOf(p){return p?.playerType==="import"?"import":"original";}
 function playerTypeLabel(p){return playerTypeOf(p)==="import"?"IMPORT":"ORIGINAL";}
 function renderPlayers(){
