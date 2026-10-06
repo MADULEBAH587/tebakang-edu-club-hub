@@ -129,3 +129,22 @@ dialog{border:0;padding:0;color:#fff;background:transparent}dialog::backdrop{bac
   .admin-topbar{grid-template-columns:40px 1fr auto}.admin-brand strong{font-size:12px}.top-actions .text-btn{padding:7px 7px;font-size:6px}
   .dashboard-head h1{font-size:33px}.page-actions h2{font-size:28px}
 }
+
+
+/* ===== App viewport lock: only the active Admin module scrolls ===== */
+body.admin-authenticated{height:100dvh;min-height:100dvh;overflow:hidden}
+body.admin-authenticated .admin-topbar{position:fixed;top:0;left:0;right:0;width:100%;z-index:120}
+body.admin-authenticated .admin-shell{height:100dvh;padding-top:72px;overflow:hidden}
+body.admin-authenticated #dashboard{height:calc(100dvh - 72px);overflow:hidden}
+body.admin-authenticated .admin-workspace{height:100%;min-height:0;overflow:hidden}
+body.admin-authenticated .admin-sidebar{top:0;height:100%;min-height:0}
+body.admin-authenticated .admin-main{height:100%;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;scrollbar-gutter:stable}
+body.admin-authenticated [data-page-panel]:not(.active){display:none!important}
+body.admin-authenticated [data-page-panel][hidden]{display:none!important}
+body.admin-authenticated [data-page-panel].active{display:block!important}
+@media(max-width:900px){
+  body.admin-authenticated .admin-shell{padding-top:64px}
+  body.admin-authenticated #dashboard{height:calc(100dvh - 64px)}
+  body.admin-authenticated .admin-sidebar{top:0;height:100dvh}
+  body.admin-authenticated .admin-main{padding-bottom:max(28px,env(safe-area-inset-bottom))}
+}
