@@ -25,8 +25,8 @@ function openAdminSidebar(){document.body.classList.add("admin-sidebar-open");ad
 function closeAdminSidebar(){document.body.classList.remove("admin-sidebar-open");adminSidebar?.classList.remove("open");adminSidebarBackdrop?.classList.remove("show");adminMenuButton?.setAttribute("aria-expanded","false");}
 function page(n){
   if(!ADMIN_PAGE_META[n])n="home";
-  $("[data-page-panel]").forEach(p=>{const active=p.dataset.pagePanel===n;p.classList.toggle("active",active);p.hidden=!active;});
-  $("#adminNav [data-page]").forEach(b=>b.classList.toggle("active",b.dataset.page===n));
+  $$("[data-page-panel]").forEach(p=>{const active=p.dataset.pagePanel===n;p.classList.toggle("active",active);p.hidden=!active;});
+  $$("#adminNav [data-page]").forEach(b=>b.classList.toggle("active",b.dataset.page===n));
   $("#pageTitle").textContent=ADMIN_PAGE_META[n][0];
   $("#pageSubtitle").textContent=ADMIN_PAGE_META[n][1];
   closeAdminSidebar();
